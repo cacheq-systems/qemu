@@ -78,11 +78,13 @@ void cpu_loop(CPUPPCState *env)
     int trapnr;
     target_ulong ret;
 
+    // VIGGY:
+    FILE *pTBLog = fopen("tb-isa-data.txt", "w+");
     for(;;) {
         bool arch_interrupt;
 
         cpu_exec_start(cs);
-        trapnr = cpu_exec(cs);
+        trapnr = cpu_exec(cs, pTBLog);
         cpu_exec_end(cs);
         process_queued_cpu_work(cs);
 
@@ -483,6 +485,7 @@ void cpu_loop(CPUPPCState *env)
             env->reserve_addr = -1;
         }
     }
+    fclose(pTBLog);
 }
 
 void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)

@@ -114,6 +114,7 @@ static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
     insnData._size = insn->size;
     memcpy(&insnData._bytes, &insn->bytes, sizeof(insnData._bytes));
     g_array_append_val(targIsa->_p_isa_insns, insnData);
+    ++targIsa->_insns_size;
 }
 
 static void cap_dump_insn_units(disassemble_info *info, cs_insn *insn,

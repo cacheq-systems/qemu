@@ -40,6 +40,8 @@
 #include "exec/cpu-all.h"
 #include "sysemu/cpu-timers.h"
 #include "sysemu/replay.h"
+// VIGGY:
+#include "disas/target-isa.h"
 
 /* -icount align implementation. */
 
@@ -698,7 +700,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 
 /* main execution loop */
 
-int cpu_exec(CPUState *cpu)
+int cpu_exec(CPUState *cpu, FILE *pTBLog)
 {
     CPUClass *cc = CPU_GET_CLASS(cpu);
     int ret;
@@ -768,10 +770,20 @@ int cpu_exec(CPUState *cpu)
             }
 
             tb = tb_find(cpu, last_tb, tb_exit, cflags);
+ 
+            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
 
             // VIGGY: Log ISA here...
-
-            cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+            if (pTBLog != NULL) {
+                fprintf(pTBLog, "PC: 0x%.8lx\n", tb->_p_isa_data->_pc_start_addr);
+                for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
+                    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
+                    for (int j = 0; j < pInsn->_size; ++j) {
+                        fprintf(pTBLog, "%.2x", pInsn->_bytes[j]);
+                    }
+                    fprintf(pTBLog, "\n");
+                }
+            }
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);

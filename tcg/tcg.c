@@ -1050,6 +1050,8 @@ TranslationBlock *tcg_tb_alloc(TCGContext *s)
     tb->_p_isa_data->_pc_start_addr = 0;
     tb->_p_isa_data->_tb_state = TARG_ISA_TB_LINEAR;
     tb->_p_isa_data->_p_isa_insns = g_array_new(FALSE, FALSE, sizeof(TargetInsn));
+    tb->_p_isa_data->_insns_size = 0;
+    tb->_p_isa_data->_time_size = 0;
 
     return tb;
 }
