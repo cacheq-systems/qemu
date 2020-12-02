@@ -3,6 +3,9 @@
 
 #include "exec/hwaddr.h"
 
+// VIGGY:
+typedef struct TargetIsaData TargetIsaData;
+
 #ifdef NEED_CPU_H
 #include "cpu.h"
 
@@ -18,6 +21,10 @@ char *plugin_disas(CPUState *cpu, uint64_t addr, size_t size);
 
 /* Look up symbol for debugging purpose.  Returns "" if unknown. */
 const char *lookup_symbol(target_ulong orig_addr);
+
+// VIGGY: Disassemble, and annotate the TB...
+void annot8_target_disas(CPUState *cpu, TargetIsaData *targIsa,
+    target_ulong code, target_ulong size);
 #endif
 
 struct syminfo;

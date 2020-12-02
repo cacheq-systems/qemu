@@ -1345,6 +1345,11 @@ static void xtensa_tr_disas_log(const DisasContextBase *dcbase, CPUState *cpu)
     log_target_disas(cpu, dcbase->pc_first, dcbase->tb->size);
 }
 
+static void xtensa_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps xtensa_translator_ops = {
     .init_disas_context = xtensa_tr_init_disas_context,
     .tb_start           = xtensa_tr_tb_start,
@@ -1353,6 +1358,7 @@ static const TranslatorOps xtensa_translator_ops = {
     .translate_insn     = xtensa_tr_translate_insn,
     .tb_stop            = xtensa_tr_tb_stop,
     .disas_log          = xtensa_tr_disas_log,
+    .tb_annot8          = xtensa_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cpu, TranslationBlock *tb, int max_insns)

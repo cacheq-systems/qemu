@@ -9245,6 +9245,11 @@ static void arm_tr_disas_log(const DisasContextBase *dcbase, CPUState *cpu)
     log_target_disas(cpu, dc->base.pc_first, dc->base.tb->size);
 }
 
+static void arm_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps arm_translator_ops = {
     .init_disas_context = arm_tr_init_disas_context,
     .tb_start           = arm_tr_tb_start,
@@ -9253,6 +9258,7 @@ static const TranslatorOps arm_translator_ops = {
     .translate_insn     = arm_tr_translate_insn,
     .tb_stop            = arm_tr_tb_stop,
     .disas_log          = arm_tr_disas_log,
+    .tb_annot8          = arm_tr_tb_annot8,
 };
 
 static const TranslatorOps thumb_translator_ops = {
@@ -9263,6 +9269,7 @@ static const TranslatorOps thumb_translator_ops = {
     .translate_insn     = thumb_tr_translate_insn,
     .tb_stop            = arm_tr_tb_stop,
     .disas_log          = arm_tr_disas_log,
+    .tb_annot8          = arm_tr_tb_annot8,
 };
 
 /* generate intermediate code for basic block 'tb'.  */

@@ -31582,6 +31582,11 @@ static void mips_tr_disas_log(const DisasContextBase *dcbase, CPUState *cs)
     log_target_disas(cs, dcbase->pc_first, dcbase->tb->size);
 }
 
+static void mips_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps mips_tr_ops = {
     .init_disas_context = mips_tr_init_disas_context,
     .tb_start           = mips_tr_tb_start,
@@ -31590,6 +31595,7 @@ static const TranslatorOps mips_tr_ops = {
     .translate_insn     = mips_tr_translate_insn,
     .tb_stop            = mips_tr_tb_stop,
     .disas_log          = mips_tr_disas_log,
+    .tb_annot8          = mips_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)

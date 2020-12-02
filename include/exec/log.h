@@ -5,6 +5,9 @@
 #include "hw/core/cpu.h"
 #include "disas/disas.h"
 
+// VIGGY:
+typedef struct TargetIsaData TargetIsaData;
+
 /* cpu_dump_state() logging functions: */
 /**
  * log_cpu_state:
@@ -43,6 +46,13 @@ static inline void log_cpu_state_mask(int mask, CPUState *cpu, int flags)
 }
 
 #ifdef NEED_CPU_H
+// VIGGY: Annotate TB with isa info...
+static inline void annot8_target_tb(CPUState *cpu, TargetIsaData *targIsa,
+    target_ulong start, target_ulong len)
+{
+    annot8_target_disas(cpu, targIsa, start, len);
+}
+
 /* disas() and target_disas() to qemu_logfile: */
 static inline void log_target_disas(CPUState *cpu, target_ulong start,
                                     target_ulong len)

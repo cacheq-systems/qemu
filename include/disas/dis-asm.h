@@ -9,6 +9,9 @@
 #ifndef DISAS_DIS_ASM_H
 #define DISAS_DIS_ASM_H
 
+// VIGGY:
+typedef struct TargetIsaData TargetIsaData;
+
 typedef void *PTR;
 typedef uint64_t bfd_vma;
 typedef int64_t bfd_signed_vma;
@@ -465,11 +468,15 @@ bool cap_disas_target(disassemble_info *info, uint64_t pc, size_t size);
 bool cap_disas_host(disassemble_info *info, void *code, size_t size);
 bool cap_disas_monitor(disassemble_info *info, uint64_t pc, int count);
 bool cap_disas_plugin(disassemble_info *info, uint64_t pc, size_t size);
+// VIGGY:
+bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info, uint64_t pc, size_t size);
 #else
 # define cap_disas_target(i, p, s)  false
 # define cap_disas_host(i, p, s)    false
 # define cap_disas_monitor(i, p, c) false
 # define cap_disas_plugin(i, p, c)  false
+// VIGGY:
+#define cap_disas_annot8 (t, i, p, s) false
 #endif /* CONFIG_CAPSTONE */
 
 #ifndef ATTRIBUTE_UNUSED

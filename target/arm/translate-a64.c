@@ -14910,6 +14910,11 @@ static void aarch64_tr_disas_log(const DisasContextBase *dcbase,
     log_target_disas(cpu, dc->base.pc_first, dc->base.tb->size);
 }
 
+static void aarch64_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 const TranslatorOps aarch64_translator_ops = {
     .init_disas_context = aarch64_tr_init_disas_context,
     .tb_start           = aarch64_tr_tb_start,
@@ -14918,4 +14923,5 @@ const TranslatorOps aarch64_translator_ops = {
     .translate_insn     = aarch64_tr_translate_insn,
     .tb_stop            = aarch64_tr_tb_stop,
     .disas_log          = aarch64_tr_disas_log,
+    .tb_annot8          = aarch64_tr_tb_annot8,
 };

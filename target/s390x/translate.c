@@ -6629,6 +6629,11 @@ static void s390x_tr_disas_log(const DisasContextBase *dcbase, CPUState *cs)
     }
 }
 
+static void s390x_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps s390x_tr_ops = {
     .init_disas_context = s390x_tr_init_disas_context,
     .tb_start           = s390x_tr_tb_start,
@@ -6637,6 +6642,7 @@ static const TranslatorOps s390x_tr_ops = {
     .translate_insn     = s390x_tr_translate_insn,
     .tb_stop            = s390x_tr_tb_stop,
     .disas_log          = s390x_tr_disas_log,
+    .tb_annot8          = s390x_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)

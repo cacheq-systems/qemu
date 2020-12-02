@@ -5938,6 +5938,11 @@ static void sparc_tr_disas_log(const DisasContextBase *dcbase, CPUState *cpu)
     log_target_disas(cpu, dcbase->pc_first, dcbase->tb->size);
 }
 
+static void sparc_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps sparc_tr_ops = {
     .init_disas_context = sparc_tr_init_disas_context,
     .tb_start           = sparc_tr_tb_start,
@@ -5946,6 +5951,7 @@ static const TranslatorOps sparc_tr_ops = {
     .translate_insn     = sparc_tr_translate_insn,
     .tb_stop            = sparc_tr_tb_stop,
     .disas_log          = sparc_tr_disas_log,
+    .tb_annot8          = sparc_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)

@@ -211,6 +211,23 @@ static void initialize_debug_host(CPUDebug *s)
 #endif
 }
 
+// VIGGY: Disassemble, and annotate the TB...
+void annot8_target_disas(CPUState *cpu, TargetIsaData *targIsa,
+    target_ulong code, target_ulong size)
+{
+    //target_ulong pc;
+    //int count;
+    CPUDebug s;
+
+    initialize_debug_target(&s, cpu);
+    s.info.buffer_vma = code;
+    s.info.buffer_length = size;
+
+    if (s.info.cap_arch >= 0 && cap_disas_annot8(targIsa, &s.info, code, size)) {
+        return;
+    }
+}
+
 /* Disassemble this for me please... (debugging).  */
 void target_disas(FILE *out, CPUState *cpu, target_ulong code,
                   target_ulong size)

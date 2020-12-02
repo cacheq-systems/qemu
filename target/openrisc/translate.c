@@ -1738,6 +1738,11 @@ static void openrisc_tr_disas_log(const DisasContextBase *dcbase, CPUState *cs)
     log_target_disas(cs, s->base.pc_first, s->base.tb->size);
 }
 
+static void openrisc_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps openrisc_tr_ops = {
     .init_disas_context = openrisc_tr_init_disas_context,
     .tb_start           = openrisc_tr_tb_start,
@@ -1746,6 +1751,7 @@ static const TranslatorOps openrisc_tr_ops = {
     .translate_insn     = openrisc_tr_translate_insn,
     .tb_stop            = openrisc_tr_tb_stop,
     .disas_log          = openrisc_tr_disas_log,
+    .tb_annot8          = openrisc_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)

@@ -8,6 +8,8 @@
 #include "disas/dis-asm.h"
 #include "disas/capstone.h"
 
+// VIGGY:
+#include "disas/target-isa.h"
 
 /*
  * Temporary storage for the capstone library.  This will be alloced via
@@ -102,6 +104,18 @@ static cs_err cap_disas_start(disassemble_info *info, csh *handle)
     return CS_ERR_OK;
 }
 
+static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
+    cs_insn *insn)
+{
+    TargetInsn insnData;
+
+    //insnData._id = insn->id;
+    //insnData._address = insn->address;
+    insnData._size = insn->size;
+    memcpy(&insnData._bytes, &insn->bytes, sizeof(insnData._bytes));
+    g_array_append_val(targIsa->_p_isa_insns, insnData);
+}
+
 static void cap_dump_insn_units(disassemble_info *info, cs_insn *insn,
                                 int i, int n)
 {
@@ -172,6 +186,61 @@ static void cap_dump_insn(disassemble_info *info, cs_insn *insn)
         cap_dump_insn_units(info, insn, i, MIN(n, i + split));
         print(stream, "\n");
     }
+}
+
+// VIGGY: Disassemble at PC, annotate data in TB...
+bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
+    uint64_t pc, size_t size)
+{
+    uint8_t cap_buf[1024];
+    csh handle;
+    cs_insn *insn;
+    size_t csize = 0;
+
+    if (cap_disas_start(info, &handle) != CS_ERR_OK) {
+        return false;
+    }
+    insn = cap_insn;
+
+    while (1) {
+        size_t tsize = MIN(sizeof(cap_buf) - csize, size);
+        const uint8_t *cbuf = cap_buf;
+
+        info->read_memory_func(pc + csize, cap_buf + csize, tsize, info);
+        csize += tsize;
+        size -= tsize;
+
+        while (cs_disasm_iter(handle, &cbuf, &csize, &pc, insn)) {
+            cap_annot8_insn(targIsa, info, insn);
+        }
+
+        /* If the target memory is not consumed, go back for more... */
+        if (size != 0) {
+            /*
+             * ... taking care to move any remaining fractional insn
+             * to the beginning of the buffer.
+             */
+            if (csize != 0) {
+                memmove(cap_buf, cbuf, csize);
+            }
+            continue;
+        }
+
+        /*
+         * Since the target memory is consumed, we should not have
+         * a remaining fractional insn.
+         */
+        if (csize != 0) {
+            info->fprintf_func(info->stream,
+                "Disassembler disagrees with translator "
+                "over instruction decoding\n"
+                "Please report this to qemu-devel@nongnu.org\n");
+        }
+        break;
+    }
+
+    cs_close(&handle);
+    return true;
 }
 
 /* Disassemble SIZE bytes at PC for the target.  */

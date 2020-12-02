@@ -8613,6 +8613,11 @@ static void i386_tr_disas_log(const DisasContextBase *dcbase,
     log_target_disas(cpu, dc->base.pc_first, dc->base.tb->size);
 }
 
+static void i386_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps i386_tr_ops = {
     .init_disas_context = i386_tr_init_disas_context,
     .tb_start           = i386_tr_tb_start,
@@ -8621,6 +8626,7 @@ static const TranslatorOps i386_tr_ops = {
     .translate_insn     = i386_tr_translate_insn,
     .tb_stop            = i386_tr_tb_stop,
     .disas_log          = i386_tr_disas_log,
+    .tb_annot8          = i386_tr_tb_annot8,
 };
 
 /* generate intermediate code for basic block 'tb'.  */

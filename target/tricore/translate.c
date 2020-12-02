@@ -8895,6 +8895,11 @@ static void tricore_tr_disas_log(const DisasContextBase *dcbase, CPUState *cpu)
     log_target_disas(cpu, dcbase->pc_first, dcbase->tb->size);
 }
 
+static void tricore_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps tricore_tr_ops = {
     .init_disas_context = tricore_tr_init_disas_context,
     .tb_start           = tricore_tr_tb_start,
@@ -8903,6 +8908,7 @@ static const TranslatorOps tricore_tr_ops = {
     .translate_insn     = tricore_tr_translate_insn,
     .tb_stop            = tricore_tr_tb_stop,
     .disas_log          = tricore_tr_disas_log,
+    .tb_annot8          = tricore_tr_tb_annot8,
 };
 
 

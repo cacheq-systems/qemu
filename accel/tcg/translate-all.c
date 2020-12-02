@@ -59,6 +59,8 @@
 #include "sysemu/cpus.h"
 #include "sysemu/cpu-timers.h"
 #include "sysemu/tcg.h"
+// VIGGY:
+#include "disas/target-isa.h"
 
 /* #define DEBUG_TB_INVALIDATE */
 /* #define DEBUG_TB_FLUSH */
@@ -388,6 +390,12 @@ static int cpu_restore_state_from_tb(CPUState *cpu, TranslationBlock *tb,
 void tb_destroy(TranslationBlock *tb)
 {
     qemu_spin_destroy(&tb->jmp_lock);
+    // VIGGY: Free ISA data
+    if (tb->_p_isa_data->_p_tb_exec_time != NULL) {
+        g_array_free(tb->_p_isa_data->_p_tb_exec_time, TRUE);
+    }
+    g_array_free(tb->_p_isa_data->_p_isa_insns, TRUE);
+    free(tb->_p_isa_data);
 }
 
 bool cpu_restore_state(CPUState *cpu, uintptr_t host_pc, bool will_exit)

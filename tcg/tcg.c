@@ -44,6 +44,9 @@
 
 #include "exec/exec-all.h"
 
+// VIGGY:
+#include "disas/target-isa.h"
+
 #if !defined(CONFIG_USER_ONLY)
 #include "hw/boards.h"
 #endif
@@ -1040,6 +1043,14 @@ TranslationBlock *tcg_tb_alloc(TCGContext *s)
     }
     qatomic_set(&s->code_gen_ptr, next);
     s->data_gen_ptr = NULL;
+
+    // VIGGY: Initialize isa data...
+    tb->_p_isa_data = (TargetIsaData *)malloc(sizeof(TargetIsaData));
+    tb->_p_isa_data->_p_tb_exec_time = NULL;
+    tb->_p_isa_data->_pc_start_addr = 0;
+    tb->_p_isa_data->_tb_state = TARG_ISA_TB_LINEAR;
+    tb->_p_isa_data->_p_isa_insns = g_array_new(FALSE, FALSE, sizeof(TargetInsn));
+
     return tb;
 }
 
