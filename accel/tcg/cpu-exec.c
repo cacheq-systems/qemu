@@ -775,14 +775,18 @@ int cpu_exec(CPUState *cpu, FILE *pTBLog)
 
             // VIGGY: Log ISA here...
             if (pTBLog != NULL) {
-                fprintf(pTBLog, "PC: 0x%.8lx\n", tb->_p_isa_data->_pc_start_addr);
+                //fprintf(pTBLog, "PC: 0x%.8lx\n", tb->_p_isa_data->_pc_start_addr);
+                fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pTBLog);
+                fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pTBLog);
                 for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
                     TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
                     for (int j = 0; j < pInsn->_size; ++j) {
-                        fprintf(pTBLog, "%.2x", pInsn->_bytes[j]);
+                        //fprintf(pTBLog, "%.2x", pInsn->_bytes[j]);
+                        fwrite(&pInsn->_bytes[j], 1, 1, pTBLog);
                     }
-                    fprintf(pTBLog, "\n");
+                    //fprintf(pTBLog, "\n");
                 }
+                fflush(pTBLog);
             }
             /* Try to align the host and virtual clocks
                if the guest is in advance */

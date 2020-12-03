@@ -79,7 +79,12 @@ void cpu_loop(CPUPPCState *env)
     target_ulong ret;
 
     // VIGGY:
-    FILE *pTBLog = fopen("tb-isa-data.txt", "w+");
+    FILE *pTBLog = fopen("tb-isa-data.bin", "w+b");
+    // Write a header...
+    uint32_t tmpVal = 0x5a5aa5a5;
+    fwrite(&tmpVal, 4, 1, pTBLog);
+    tmpVal = 0x00313030;
+    fwrite(&tmpVal, 4, 1, pTBLog);
     for(;;) {
         bool arch_interrupt;
 
