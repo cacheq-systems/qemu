@@ -79,17 +79,17 @@ void cpu_loop(CPUPPCState *env)
     target_ulong ret;
 
     // VIGGY:
-    FILE *pTBLog = fopen("tb-isa-data.bin", "w+b");
+    FILE *pPCLog = fopen("tb-pc-data.bin", "w+b");
     // Write a header...
-    uint32_t tmpVal = 0x5a5aa5a5;
-    fwrite(&tmpVal, 4, 1, pTBLog);
-    tmpVal = 0x00313030;
-    fwrite(&tmpVal, 4, 1, pTBLog);
+    uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
+    fwrite(&tmpVal, 4, 1, pPCLog);
+    tmpVal = 1000;
+    fwrite(&tmpVal, 4, 1, pPCLog);
     for(;;) {
         bool arch_interrupt;
 
         cpu_exec_start(cs);
-        trapnr = cpu_exec(cs, pTBLog);
+        trapnr = cpu_exec(cs, pPCLog);
         cpu_exec_end(cs);
         process_queued_cpu_work(cs);
 
@@ -490,7 +490,7 @@ void cpu_loop(CPUPPCState *env)
             env->reserve_addr = -1;
         }
     }
-    fclose(pTBLog);
+    fclose(pPCLog);
 }
 
 void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)

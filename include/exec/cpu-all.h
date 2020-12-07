@@ -421,7 +421,7 @@ void dump_opcount_info(void);
 int cpu_memory_rw_debug(CPUState *cpu, target_ulong addr,
                         void *ptr, target_ulong len, bool is_write);
 
-int cpu_exec(CPUState *cpu, FILE *pTBLog);
+int cpu_exec(CPUState *cpu, FILE *pPCLog);
 
 /**
  * cpu_set_cpustate_pointers(cpu)

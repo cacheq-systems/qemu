@@ -700,7 +700,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 
 /* main execution loop */
 
-int cpu_exec(CPUState *cpu, FILE *pTBLog)
+int cpu_exec(CPUState *cpu, FILE *pPCLog)
 {
     CPUClass *cc = CPU_GET_CLASS(cpu);
     int ret;
@@ -749,6 +749,10 @@ int cpu_exec(CPUState *cpu, FILE *pTBLog)
         assert_no_pages_locked();
     }
 
+    // VIGGY:
+    uint32_t lastPC = 0;
+    uint32_t numInsns = 0;
+
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)) {
         TranslationBlock *last_tb = NULL;
@@ -774,24 +778,40 @@ int cpu_exec(CPUState *cpu, FILE *pTBLog)
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
 
             // VIGGY: Log ISA here...
-            if (pTBLog != NULL) {
-                //fprintf(pTBLog, "PC: 0x%.8lx\n", tb->_p_isa_data->_pc_start_addr);
-                fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pTBLog);
-                fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pTBLog);
-                for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
-                    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
-                    for (int j = 0; j < pInsn->_size; ++j) {
-                        //fprintf(pTBLog, "%.2x", pInsn->_bytes[j]);
-                        fwrite(&pInsn->_bytes[j], 1, 1, pTBLog);
-                    }
-                    //fprintf(pTBLog, "\n");
+            if (pPCLog != NULL) {
+                if (lastPC == 0) {
+                    // Begining...
+                    lastPC = tb->_p_isa_data->_pc_start_addr;
+                    numInsns = tb->_p_isa_data->_insns_size;
+                } else if ((lastPC + (numInsns * 4) == tb->_p_isa_data->_pc_start_addr)) {
+                    numInsns += tb->_p_isa_data->_insns_size;
                 }
-                fflush(pTBLog);
+                else {
+                    fwrite(&lastPC, 4, 1, pPCLog);
+                    fwrite(&numInsns, 4, 1, pPCLog);
+                    lastPC = tb->_p_isa_data->_pc_start_addr;
+                    numInsns = tb->_p_isa_data->_insns_size;
+                }
+                //fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pPCLog);
+                //fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pPCLog);
+                //for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
+                //    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
+                //    for (int j = 0; j < pInsn->_size; ++j) {
+                //        fwrite(&pInsn->_bytes[j], 1, 1, pPCLog);
+                //    }
+                //}
+                fflush(pPCLog);
             }
+
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
         }
+    }
+    if (lastPC != 0) {
+        fwrite(&lastPC, 4, 1, pPCLog);
+        fwrite(&numInsns, 4, 1, pPCLog);
+        fflush(pPCLog);
     }
 
     cc->cpu_exec_exit(cpu);

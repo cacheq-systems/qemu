@@ -36,11 +36,11 @@ typedef struct TargetInsn {
 } TargetInsn;
 
 typedef struct TargetIsaData {
-    unsigned long       _pc_start_addr;
-    unsigned long       _pc_size;
+    uint32_t            _pc_start_addr;
+    uint32_t            _pc_size;
     target_isa_tb_state _tb_state;
-    unsigned int        _insns_size;        // Number of TargetInsns
-    unsigned int        _time_size;         // Number of exec times
+    uint32_t            _insns_size;        // Number of TargetInsns
+    uint32_t            _time_size;         // Number of exec times
     GArray             *_p_tb_exec_time;    // Array of doubles
     GArray             *_p_isa_insns;       // Array of TargetInsn
 } TargetIsaData;

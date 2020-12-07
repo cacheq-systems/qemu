@@ -109,8 +109,6 @@ static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
 {
     TargetInsn insnData;
 
-    //insnData._id = insn->id;
-    //insnData._address = insn->address;
     insnData._size = insn->size;
     memcpy(&insnData._bytes, &insn->bytes, sizeof(insnData._bytes));
     g_array_append_val(targIsa->_p_isa_insns, insnData);
