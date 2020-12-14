@@ -750,6 +750,7 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
     }
 
     // VIGGY:
+    int8_t bFirstPCDumped = 0;
     uint32_t lastPC = 0;
     uint32_t numInsns = 0;
 
@@ -787,7 +788,14 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
                     numInsns += tb->_p_isa_data->_insns_size;
                 }
                 else {
-                    fwrite(&lastPC, 4, 1, pPCLog);
+                    int32_t relPC = tb->_p_isa_data->_pc_start_addr - (lastPC + (numInsns * 4));
+                    if (bFirstPCDumped == 0) {
+                        bFirstPCDumped = 1;
+                        fwrite(&lastPC, 4, 1, pPCLog);
+                    }
+                    else {
+                        fwrite(&relPC, 4, 1, pPCLog);
+                    }
                     fwrite(&numInsns, 4, 1, pPCLog);
                     lastPC = tb->_p_isa_data->_pc_start_addr;
                     numInsns = tb->_p_isa_data->_insns_size;
