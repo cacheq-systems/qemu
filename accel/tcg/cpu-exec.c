@@ -42,6 +42,7 @@
 #include "sysemu/replay.h"
 // VIGGY:
 #include "disas/target-isa.h"
+//#include "pthread.h"
 
 /* -icount align implementation. */
 
@@ -699,43 +700,58 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
-void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog)
+static GAsyncQueue *_pIsaQueue;
+static FILE *_pPCLog;
+static uint8_t _nThreadStop;
+static void *log_pc(void *pArgs)
 {
+    static uint8_t start = 1;
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;
+    TargetIsaData *pData;
 
-    if (pLog != NULL) {
-        if (lastPC == 0) {
-            // Begining...
-            lastPC = pData->_pc_start_addr;
-            numInsns = pData->_insns_size;
-        }
-        else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
-            numInsns += pData->_insns_size;
-        }
-        else {
-            int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-            if (*pStart == 1) {
-                *pStart = 0;
-                fwrite(&lastPC, 4, 1, pLog);
+    for (;;) {
+        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+        if ((pData != NULL) && (_pPCLog != NULL)) {
+            if (lastPC == 0) {
+                // Begining...
+                lastPC = pData->_pc_start_addr;
+                numInsns = pData->_insns_size;
+            }
+            else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
+                numInsns += pData->_insns_size;
             }
             else {
-                fwrite(&relPC, 4, 1, pLog);
+                int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+                if (start == 1) {
+                    start = 0;
+                    fwrite(&lastPC, 4, 1, _pPCLog);
+                }
+                else {
+                    fwrite(&relPC, 4, 1, _pPCLog);
+                }
+                fwrite(&numInsns, 4, 1, _pPCLog);
+                lastPC = pData->_pc_start_addr;
+                numInsns = pData->_insns_size;
             }
-            fwrite(&numInsns, 4, 1, pLog);
-            lastPC = pData->_pc_start_addr;
-            numInsns = pData->_insns_size;
+            //fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pPCLog);
+            //fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pPCLog);
+            //for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
+            //    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
+            //    for (int j = 0; j < pInsn->_size; ++j) {
+            //        fwrite(&pInsn->_bytes[j], 1, 1, pPCLog);
+            //    }
+            //}
+            fflush(_pPCLog);
         }
-        //fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pPCLog);
-        //fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pPCLog);
-        //for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
-        //    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
-        //    for (int j = 0; j < pInsn->_size; ++j) {
-        //        fwrite(&pInsn->_bytes[j], 1, 1, pPCLog);
-        //    }
-        //}
-        fflush(pLog);
+        if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
+            break;
+        }
+        else {
+            //sleep(1000);
+        }
     }
+    return NULL;
 }
 
 /* main execution loop */
@@ -745,6 +761,8 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
     CPUClass *cc = CPU_GET_CLASS(cpu);
     int ret;
     SyncClocks sc = { 0 };
+    // VIGGY:
+    pthread_t logThreadID;
 
     /* replay_interrupt may need current_cpu */
     current_cpu = cpu;
@@ -790,7 +808,11 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
     }
 
     // VIGGY:
-    int bFirstPC = 1;
+    _pPCLog = pPCLog;
+    _nThreadStop = 0;
+    _pIsaQueue = g_async_queue_new();
+    // Start the dumper thread.
+    pthread_create(&logThreadID, NULL, log_pc, NULL);
 
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)) {
@@ -817,13 +839,18 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
 
             // VIGGY: Log ISA here...
-            log_pc(&bFirstPC, tb->_p_isa_data, pPCLog);
+            g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
+            //log_pc(NULL);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
         }
     }
+
+    _nThreadStop = 1;
+    pthread_join(logThreadID, NULL);
+    g_async_queue_unref(_pIsaQueue);
 
     cc->cpu_exec_exit(cpu);
     rcu_read_unlock();
