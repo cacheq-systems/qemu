@@ -240,16 +240,17 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     }
 
     // Open the TB log, and log it.
-    //FILE *pTBLog = fopen("tb-data.bin", "a+b");
-    fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
-    fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
-    for (int i = 0; i < targIsa->_insns_size; ++i) {
-        TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
-        for (int j = 0; j < pInsn->_size; ++j) {
-            fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+    if (_pTBLog != NULL) {
+        fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
+        fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        for (int i = 0; i < targIsa->_insns_size; ++i) {
+            TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
+            for (int j = 0; j < pInsn->_size; ++j) {
+                fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+            }
         }
+        //fflush(_pTBLog);
     }
-    //fclose(pTBLog);
     cs_close(&handle);
     return true;
 }

@@ -240,7 +240,7 @@ static int tcg_cpu_exec(CPUState *cpu)
     ti = profile_getclock();
 #endif
     cpu_exec_start(cpu);
-    ret = cpu_exec(cpu, NULL);
+    ret = cpu_exec(cpu);
     cpu_exec_end(cpu);
 #ifdef CONFIG_PROFILER
     qatomic_set(&tcg_ctx->prof.cpu_exec_time,

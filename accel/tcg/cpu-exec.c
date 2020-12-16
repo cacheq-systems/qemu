@@ -699,12 +699,13 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
-static void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog)
+extern FILE *_pPCLog;
+static void log_pc(int *pStart, const TargetIsaData *pData)
 {
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;
 
-    if (pLog != NULL) {
+    if (_pPCLog != NULL) {
         if (lastPC == 0) {
             // Begining...
             lastPC = pData->_pc_start_addr;
@@ -717,30 +718,22 @@ static void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog)
             int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
             if (*pStart == 1) {
                 *pStart = 0;
-                fwrite(&lastPC, 4, 1, pLog);
+                fwrite(&lastPC, 4, 1, _pPCLog);
             }
             else {
-                fwrite(&relPC, 4, 1, pLog);
+                fwrite(&relPC, 4, 1, _pPCLog);
             }
-            fwrite(&numInsns, 4, 1, pLog);
+            fwrite(&numInsns, 4, 1, _pPCLog);
             lastPC = pData->_pc_start_addr;
             numInsns = pData->_insns_size;
         }
-        //fwrite(&tb->_p_isa_data->_pc_start_addr, 4, 1, pPCLog);
-        //fwrite(&tb->_p_isa_data->_insns_size, 4, 1, pPCLog);
-        //for (int i = 0; i < tb->_p_isa_data->_insns_size; ++i) {
-        //    TargetInsn *pInsn = &g_array_index(tb->_p_isa_data->_p_isa_insns, TargetInsn, i);
-        //    for (int j = 0; j < pInsn->_size; ++j) {
-        //        fwrite(&pInsn->_bytes[j], 1, 1, pPCLog);
-        //    }
-        //}
-        fflush(pLog);
+        //fflush(_pPCLog);
     }
 }
 
 /* main execution loop */
 
-int cpu_exec(CPUState *cpu, FILE *pPCLog)
+int cpu_exec(CPUState *cpu)
 {
     CPUClass *cc = CPU_GET_CLASS(cpu);
     int ret;
@@ -817,7 +810,7 @@ int cpu_exec(CPUState *cpu, FILE *pPCLog)
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
 
             // VIGGY: Log ISA here...
-            log_pc(&bFirstPC, tb->_p_isa_data, pPCLog);
+            log_pc(&bFirstPC, tb->_p_isa_data);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */

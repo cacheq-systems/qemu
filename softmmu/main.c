@@ -45,10 +45,20 @@ int main(int argc, char **argv)
 #endif /* CONFIG_COCOA */
 
 FILE *_pTBLog = NULL;
+FILE *_pPCLog = NULL;
 int main(int argc, char **argv, char **envp)
 {
     qemu_init(argc, argv, envp);
+
+    // VIGGY: Open TB/PC dump log files...
+    _pPCLog = fopen("pc-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
+
     qemu_main_loop();
+
+    fclose(_pPCLog);
+    fclose(_pTBLog);
+
     qemu_cleanup();
 
     return 0;
