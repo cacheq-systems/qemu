@@ -699,7 +699,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
-void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog)
+static void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog)
 {
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;

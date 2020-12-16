@@ -188,6 +188,7 @@ static void cap_dump_insn(disassemble_info *info, cs_insn *insn)
 }
 
 // VIGGY: Disassemble at PC, annotate data in TB...
+extern FILE *_pTBLog;
 bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     uint64_t pc, size_t size)
 {
@@ -238,6 +239,17 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
         break;
     }
 
+    // Open the TB log, and log it.
+    //FILE *pTBLog = fopen("tb-data.bin", "a+b");
+    fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
+    fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+    for (int i = 0; i < targIsa->_insns_size; ++i) {
+        TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
+        for (int j = 0; j < pInsn->_size; ++j) {
+            fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+        }
+    }
+    //fclose(pTBLog);
     cs_close(&handle);
     return true;
 }

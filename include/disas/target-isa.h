@@ -45,5 +45,4 @@ typedef struct TargetIsaData {
     GArray             *_p_isa_insns;       // Array of TargetInsn
 } TargetIsaData;
 
-void log_pc(int *pStart, const TargetIsaData *pData, FILE *pLog);
 #endif

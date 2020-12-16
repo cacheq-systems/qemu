@@ -71,6 +71,8 @@ int ppc_dcr_write (ppc_dcr_t *dcr_env, int dcrn, uint32_t val)
     return -1;
 }
 
+FILE *_pTBLog = NULL;
+
 void cpu_loop(CPUPPCState *env)
 {
     CPUState *cs = env_cpu(env);
@@ -78,13 +80,17 @@ void cpu_loop(CPUPPCState *env)
     int trapnr;
     target_ulong ret;
 
-    // VIGGY:
-    FILE *pPCLog = fopen("tb-pc-data.bin", "w+b");
+    // VIGGY: Open TB/PC dump log files...
+    FILE *pPCLog = fopen("pc-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
     // Write a header...
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fclose(pTBLog);
     for(;;) {
         bool arch_interrupt;
 
@@ -491,6 +497,7 @@ void cpu_loop(CPUPPCState *env)
         }
     }
     fclose(pPCLog);
+    fclose(_pTBLog);
 }
 
 void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)

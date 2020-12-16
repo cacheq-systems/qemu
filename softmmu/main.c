@@ -44,6 +44,7 @@ int main(int argc, char **argv)
 #define main qemu_main
 #endif /* CONFIG_COCOA */
 
+FILE *_pTBLog = NULL;
 int main(int argc, char **argv, char **envp)
 {
     qemu_init(argc, argv, envp);
