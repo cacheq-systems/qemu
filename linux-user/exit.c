@@ -26,6 +26,9 @@
 extern void __gcov_dump(void);
 #endif
 
+extern FILE *_pTBLog;
+extern FILE *_pPCLog;
+
 void preexit_cleanup(CPUArchState *env, int code)
 {
 #ifdef CONFIG_GPROF
@@ -34,6 +37,12 @@ void preexit_cleanup(CPUArchState *env, int code)
 #ifdef CONFIG_GCOV
         __gcov_dump();
 #endif
+        if (_pTBLog != NULL) {
+            fclose(_pTBLog);
+        }
+        if (_pPCLog != NULL) {
+            fclose(_pPCLog);
+        }
         gdb_exit(env, code);
         qemu_plugin_atexit_cb();
 }

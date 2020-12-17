@@ -497,8 +497,8 @@ void cpu_loop(CPUPPCState *env)
             env->reserve_addr = -1;
         }
     }
-    fclose(_pPCLog);
-    fclose(_pTBLog);
+    //fclose(_pPCLog);
+    //fclose(_pTBLog);
 }
 
 void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)
