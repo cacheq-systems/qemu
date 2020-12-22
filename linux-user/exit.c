@@ -18,6 +18,7 @@
  */
 #include "qemu/osdep.h"
 #include "qemu.h"
+#include <zlib.h>
 #ifdef CONFIG_GPROF
 #include <sys/gmon.h>
 #endif
@@ -28,6 +29,8 @@ extern void __gcov_dump(void);
 
 extern FILE *_pTBLog;
 extern FILE *_pPCLog;
+extern z_stream *_pPCZStrm;
+void dumpValCompressed(uint32_t val, uint8_t bForce);
 
 void preexit_cleanup(CPUArchState *env, int code)
 {
@@ -41,7 +44,12 @@ void preexit_cleanup(CPUArchState *env, int code)
             fclose(_pTBLog);
         }
         if (_pPCLog != NULL) {
+            dumpValCompressed(0, 0);
+            dumpValCompressed(0, 1);
             fclose(_pPCLog);
+        }
+        if (_pPCZStrm != NULL) {
+            deflateEnd(_pPCZStrm);
         }
         gdb_exit(env, code);
         qemu_plugin_atexit_cb();

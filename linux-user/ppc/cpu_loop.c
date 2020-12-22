@@ -21,6 +21,7 @@
 #include "qemu-common.h"
 #include "qemu.h"
 #include "cpu_loop-common.h"
+#include <zlib.h>
 
 static inline uint64_t cpu_ppc_get_tb(CPUPPCState *env)
 {
@@ -73,6 +74,7 @@ int ppc_dcr_write (ppc_dcr_t *dcr_env, int dcrn, uint32_t val)
 
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
+z_stream *_pPCZStrm = NULL;
 
 void cpu_loop(CPUPPCState *env)
 {
@@ -91,7 +93,11 @@ void cpu_loop(CPUPPCState *env)
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
     fwrite(&tmpVal, 4, 1, _pTBLog);
-    //fclose(pTBLog);
+    _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pPCZStrm->zalloc = Z_NULL;
+    _pPCZStrm->zfree = Z_NULL;
+    _pPCZStrm->opaque = Z_NULL;
+    deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
     for(;;) {
         bool arch_interrupt;
 

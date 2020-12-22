@@ -700,59 +700,58 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
+void dumpValCompressed(uint32_t val, uint8_t bForce);
+
 static GAsyncQueue *_pIsaQueue;
 extern FILE *_pPCLog;
+extern z_stream *_pPCZStrm;
 static uint8_t _nThreadStop;
-#define TMP_BUF_SIZE 16384
+#define TMP_BUF_SIZE 32768
 
 typedef struct {
     uint32_t _tmpLogBuf[TMP_BUF_SIZE];
     uint32_t _nSize;
 } LogBuffer;
 
-static void dumpValCompressed(uint32_t val, LogBuffer *pBuf, z_stream *pZStrm)
+void dumpValCompressed(uint32_t val, uint8_t bForce)
 {
-    unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
-    unsigned int compSize;
-    if (pBuf->_nSize < TMP_BUF_SIZE) {
-        pBuf->_tmpLogBuf[pBuf->_nSize] = val;
-        ++pBuf->_nSize;
-    }
-    else {
-        // Compress the buffer...
-        pZStrm->avail_in = pBuf->_nSize * sizeof(uint32_t);
-        pZStrm->next_in = (Bytef *)pBuf->_tmpLogBuf;
-        do {
-            pZStrm->avail_out = TMP_BUF_SIZE * sizeof(uint32_t);
-            pZStrm->next_out = tmpBuf;
-            deflate(pZStrm, Z_FINISH);
-            compSize = (TMP_BUF_SIZE * sizeof(uint32_t)) - pZStrm->avail_out;
-            fwrite(&tmpBuf, 1, compSize, _pPCLog);
-        } while (pZStrm->avail_out == 0);
+    static LogBuffer logBufPC = { {0}, 0 };
+    if (_pPCLog != NULL) {
+        if (!bForce && (logBufPC._nSize < TMP_BUF_SIZE)) {
+            logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+            ++logBufPC._nSize;
+        }
+        else {
+            unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
+            unsigned int compSize;
+            // Compress the buffer...
+            _pPCZStrm->avail_in = logBufPC._nSize * sizeof(uint32_t);
+            _pPCZStrm->next_in = (Bytef *)logBufPC._tmpLogBuf;
+            do {
+                _pPCZStrm->avail_out = TMP_BUF_SIZE * sizeof(uint32_t);
+                _pPCZStrm->next_out = tmpBuf;
+                deflate(_pPCZStrm, (bForce) ? Z_FINISH : Z_SYNC_FLUSH);
+                compSize = (TMP_BUF_SIZE * sizeof(uint32_t)) - _pPCZStrm->avail_out;
+                fwrite(&tmpBuf, 1, compSize, _pPCLog);
+            } while (_pPCZStrm->avail_out == 0);
 
-        // Reset the buffer
-        pBuf->_nSize = 0;
+            // Reset the buffer
+            logBufPC._nSize = 0;
+        }
     }
 }
 static void *log_pc(void *pArgs)
 {
-    static uint8_t start = 1;
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;
 
-    z_stream logStrm;
-    static LogBuffer logBuf = { {0}, 0 };
-    int zRet;
+    //int zRet;
 
     TargetIsaData *pData;
 
-    if (start == 1) {
-        logStrm.zalloc = Z_NULL;
-        logStrm.zfree = Z_NULL;
-        logStrm.opaque = Z_NULL;
-        zRet = deflateInit(&logStrm, Z_DEFAULT_COMPRESSION);
-        start = 0;
-    }
+    //static uint64_t numWritten = 0;
+
+    //if (numWritten < 3000000) {
     //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
@@ -766,14 +765,16 @@ static void *log_pc(void *pArgs)
             }
             else {
                 int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-                if (zRet == Z_OK) {
-                    dumpValCompressed(relPC, &logBuf, &logStrm);
-                    dumpValCompressed(numInsns, &logBuf, &logStrm);
-                }
-                else {
-                    fwrite(&lastPC, 4, 1, _pPCLog);
-                    fwrite(&numInsns, 4, 1, _pPCLog);
-                }
+                //if (zRet == Z_OK) {
+                    dumpValCompressed(relPC, 0);
+                    dumpValCompressed(numInsns, 0);
+                    //++numWritten;
+                //}
+                //else {
+                //    fwrite(&lastPC, 4, 1, _pPCLog);
+                //    fwrite(&numInsns, 4, 1, _pPCLog);
+                //    ++numWritten;
+                //}
                 lastPC = pData->_pc_start_addr;
                 numInsns = pData->_insns_size;
             }
@@ -784,6 +785,19 @@ static void *log_pc(void *pArgs)
         //else {
         //    //sleep(1000);
         //}
+    //}
+    //}
+    //else {
+    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+    //    if ((pData != NULL) && (_pPCLog != NULL)) {
+    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+    //        dumpValCompressed(relPC, 0);
+    //        dumpValCompressed(numInsns, 1);
+    //    }
+    //    if (_pPCLog != NULL) {
+    //        fclose(_pPCLog);
+    //        _pPCLog = NULL;
+    //    }
     //}
     return NULL;
 }
