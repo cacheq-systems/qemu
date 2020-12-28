@@ -30,6 +30,7 @@ extern void __gcov_dump(void);
 extern FILE *_pTBLog;
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
+extern z_stream *_pInsnZStrm;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
 
 void preexit_cleanup(CPUArchState *env, int code)
@@ -50,6 +51,10 @@ void preexit_cleanup(CPUArchState *env, int code)
         }
         if (_pPCZStrm != NULL) {
             deflateEnd(_pPCZStrm);
+            free(_pPCZStrm);
+            _pPCZStrm = NULL;
+            free(_pInsnZStrm);
+            _pInsnZStrm = NULL;
         }
         gdb_exit(env, code);
         qemu_plugin_atexit_cb();

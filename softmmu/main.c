@@ -48,7 +48,8 @@ int main(int argc, char **argv)
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+z_stream *_pInsnZStrm = NULL;
+void dumpValCompressed(uint32_t val, uint8_t bPC, uint8_t bForce);
 
 int main(int argc, char **argv, char **envp)
 {
@@ -56,29 +57,38 @@ int main(int argc, char **argv, char **envp)
 
     // VIGGY: Open TB/PC dump log files...
     _pPCLog = fopen("pc-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
+
     _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
     _pPCZStrm->zalloc = Z_NULL;
     _pPCZStrm->zfree = Z_NULL;
     _pPCZStrm->opaque = Z_NULL;
     deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
-    _pTBLog = fopen("tb-data.bin", "w+b");
+    _pInsnZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pInsnZStrm->zalloc = Z_NULL;
+    _pInsnZStrm->zfree = Z_NULL;
+    _pInsnZStrm->opaque = Z_NULL;
+    deflateInit(_pInsnZStrm, Z_DEFAULT_COMPRESSION);
+
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
 
     qemu_main_loop();
 
     if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
+        dumpValCompressed(0, 1, 0);
+        dumpValCompressed(0, 1, 1);
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);
         free(_pPCZStrm);
+        deflateEnd(_pInsnZStrm);
+        free(_pInsnZStrm);
     }
-    fclose(_pTBLog);
+    //fclose(_pTBLog);
 
     qemu_cleanup();
 

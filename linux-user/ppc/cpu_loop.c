@@ -75,6 +75,7 @@ int ppc_dcr_write (ppc_dcr_t *dcr_env, int dcrn, uint32_t val)
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
+z_stream *_pInsnZStrm = NULL;
 
 void cpu_loop(CPUPPCState *env)
 {
@@ -98,6 +99,11 @@ void cpu_loop(CPUPPCState *env)
     _pPCZStrm->zfree = Z_NULL;
     _pPCZStrm->opaque = Z_NULL;
     deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+    _pInsnZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pInsnZStrm->zalloc = Z_NULL;
+    _pInsnZStrm->zfree = Z_NULL;
+    _pInsnZStrm->opaque = Z_NULL;
+    deflateInit(_pInsnZStrm, Z_DEFAULT_COMPRESSION);
     for(;;) {
         bool arch_interrupt;
 
