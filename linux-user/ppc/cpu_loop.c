@@ -74,7 +74,6 @@ int ppc_dcr_write (ppc_dcr_t *dcr_env, int dcrn, uint32_t val)
 
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
-z_stream *_pPCZStrm = NULL;
 
 void cpu_loop(CPUPPCState *env)
 {
@@ -85,19 +84,14 @@ void cpu_loop(CPUPPCState *env)
 
     // VIGGY: Open TB/PC dump log files...
     _pPCLog = fopen("pc-data.bin", "w+b");
-    _pTBLog = fopen("tb-data.bin", "w+b");
+    //_pTBLog = fopen("tb-data.bin", "w+b");
     // Write a header...
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
-    _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
-    _pPCZStrm->zalloc = Z_NULL;
-    _pPCZStrm->zfree = Z_NULL;
-    _pPCZStrm->opaque = Z_NULL;
-    deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
     for(;;) {
         bool arch_interrupt;
 

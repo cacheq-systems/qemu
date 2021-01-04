@@ -42,7 +42,7 @@
 #include "sysemu/replay.h"
 // VIGGY:
 #include "disas/target-isa.h"
-#include "zlib.h"
+#include "huffman/huffinterface.h"
 
 /* -icount align implementation. */
 
@@ -704,9 +704,8 @@ void dumpValCompressed(uint32_t val, uint8_t bForce);
 
 static GAsyncQueue *_pIsaQueue;
 extern FILE *_pPCLog;
-extern z_stream *_pPCZStrm;
 static uint8_t _nThreadStop;
-#define TMP_BUF_SIZE 32768
+#define TMP_BUF_SIZE 65536
 
 typedef struct {
     uint32_t _tmpLogBuf[TMP_BUF_SIZE];
@@ -722,18 +721,10 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
             ++logBufPC._nSize;
         }
         else {
-            unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
-            unsigned int compSize;
+            //unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
+            //unsigned int compSize;
             // Compress the buffer...
-            _pPCZStrm->avail_in = logBufPC._nSize * sizeof(uint32_t);
-            _pPCZStrm->next_in = (Bytef *)logBufPC._tmpLogBuf;
-            do {
-                _pPCZStrm->avail_out = TMP_BUF_SIZE * sizeof(uint32_t);
-                _pPCZStrm->next_out = tmpBuf;
-                deflate(_pPCZStrm, (bForce) ? Z_FINISH : Z_SYNC_FLUSH);
-                compSize = (TMP_BUF_SIZE * sizeof(uint32_t)) - _pPCZStrm->avail_out;
-                fwrite(&tmpBuf, 1, compSize, _pPCLog);
-            } while (_pPCZStrm->avail_out == 0);
+            huffCompress(logBufPC._tmpLogBuf, logBufPC._nSize, _pPCLog);
 
             // Reset the buffer
             logBufPC._nSize = 0;
@@ -749,9 +740,9 @@ static void *log_pc(void *pArgs)
 
     TargetIsaData *pData;
 
-    //static uint64_t numWritten = 0;
+    static uint64_t numWritten = 0;
 
-    //if (numWritten < 3000000) {
+    if (numWritten < 3000000) {
     //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
@@ -768,7 +759,7 @@ static void *log_pc(void *pArgs)
                 //if (zRet == Z_OK) {
                     dumpValCompressed(relPC, 0);
                     dumpValCompressed(numInsns, 0);
-                    //++numWritten;
+                    ++numWritten;
                 //}
                 //else {
                 //    fwrite(&lastPC, 4, 1, _pPCLog);
@@ -786,19 +777,19 @@ static void *log_pc(void *pArgs)
         //    //sleep(1000);
         //}
     //}
-    //}
-    //else {
-    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-    //    if ((pData != NULL) && (_pPCLog != NULL)) {
-    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-    //        dumpValCompressed(relPC, 0);
-    //        dumpValCompressed(numInsns, 1);
-    //    }
-    //    if (_pPCLog != NULL) {
-    //        fclose(_pPCLog);
-    //        _pPCLog = NULL;
-    //    }
-    //}
+    }
+    else {
+        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+        if ((pData != NULL) && (_pPCLog != NULL)) {
+            int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+            dumpValCompressed(relPC, 0);
+            dumpValCompressed(numInsns, 1);
+        }
+        if (_pPCLog != NULL) {
+            fclose(_pPCLog);
+            _pPCLog = NULL;
+        }
+    }
     return NULL;
 }
 
