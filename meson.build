@@ -1710,8 +1710,11 @@ foreach m : block_mods + softmmu_mods
                 install_dir: qemu_moddir)
 endforeach
 
+myc = meson.get_compiler('c')
+hufflib = myc.find_library('huffman', dirs: '/d/Viggy/CacheQ/Boeing/qemu/huffman')
+
 softmmu_ss.add(authz, blockdev, chardev, crypto, io, qmp)
-common_ss.add(qom, qemuutil, zlib)
+common_ss.add(qom, qemuutil, hufflib)
 
 common_ss.add_all(when: 'CONFIG_SOFTMMU', if_true: [softmmu_ss])
 common_ss.add_all(when: 'CONFIG_USER_ONLY', if_true: user_ss)

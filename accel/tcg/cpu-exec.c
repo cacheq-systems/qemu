@@ -705,7 +705,7 @@ void dumpValCompressed(uint32_t val, uint8_t bForce);
 static GAsyncQueue *_pIsaQueue;
 extern FILE *_pPCLog;
 static uint8_t _nThreadStop;
-#define TMP_BUF_SIZE 65536
+#define TMP_BUF_SIZE 1048576
 
 typedef struct {
     uint32_t _tmpLogBuf[TMP_BUF_SIZE];
@@ -740,9 +740,9 @@ static void *log_pc(void *pArgs)
 
     TargetIsaData *pData;
 
-    static uint64_t numWritten = 0;
+    //static uint64_t numWritten = 0;
 
-    if (numWritten < 3000000) {
+    //if (numWritten < 3000000) {
     //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
@@ -759,7 +759,7 @@ static void *log_pc(void *pArgs)
                 //if (zRet == Z_OK) {
                     dumpValCompressed(relPC, 0);
                     dumpValCompressed(numInsns, 0);
-                    ++numWritten;
+                    //++numWritten;
                 //}
                 //else {
                 //    fwrite(&lastPC, 4, 1, _pPCLog);
@@ -777,19 +777,19 @@ static void *log_pc(void *pArgs)
         //    //sleep(1000);
         //}
     //}
-    }
-    else {
-        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-        if ((pData != NULL) && (_pPCLog != NULL)) {
-            int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-            dumpValCompressed(relPC, 0);
-            dumpValCompressed(numInsns, 1);
-        }
-        if (_pPCLog != NULL) {
-            fclose(_pPCLog);
-            _pPCLog = NULL;
-        }
-    }
+    //}
+    //else {
+    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+    //    if ((pData != NULL) && (_pPCLog != NULL)) {
+    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+    //        dumpValCompressed(relPC, 0);
+    //        dumpValCompressed(numInsns, 1);
+    //    }
+    //    if (_pPCLog != NULL) {
+    //        fclose(_pPCLog);
+    //        _pPCLog = NULL;
+    //    }
+    //}
     return NULL;
 }
 
