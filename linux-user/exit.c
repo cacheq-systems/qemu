@@ -31,6 +31,8 @@ extern FILE *_pTBLog;
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+extern pthread_t _pDumpThreadID;
+extern uint8_t _nThreadStop;
 
 void preexit_cleanup(CPUArchState *env, int code)
 {
@@ -46,6 +48,10 @@ void preexit_cleanup(CPUArchState *env, int code)
         if (_pPCLog != NULL) {
             dumpValCompressed(0, 0);
             dumpValCompressed(0, 1);
+
+            _nThreadStop = 1;
+            pthread_join(_pDumpThreadID, NULL);
+
             fclose(_pPCLog);
         }
         if (_pPCZStrm != NULL) {

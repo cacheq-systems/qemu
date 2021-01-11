@@ -705,7 +705,8 @@ void dumpValCompressed(uint32_t val, uint8_t bForce);
 static GAsyncQueue *_pIsaQueue;
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
-static uint8_t _nThreadStop;
+extern pthread_t _pDumpThreadID;
+extern uint8_t _nThreadStop;
 #define TMP_BUF_SIZE 32768
 
 typedef struct {
@@ -752,7 +753,7 @@ static void *log_pc(void *pArgs)
     //static uint64_t numWritten = 0;
 
     //if (numWritten < 3000000) {
-    //for (;;) {
+    for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
             if (lastPC == 0) {
@@ -779,14 +780,13 @@ static void *log_pc(void *pArgs)
                 numInsns = pData->_insns_size;
             }
         }
-        //if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
-        //    break;
-        //}
+        if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
+            break;
+        }
         //else {
         //    //sleep(1000);
         //}
-    //}
-    //}
+    }
     //else {
     //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
     //    if ((pData != NULL) && (_pPCLog != NULL)) {
@@ -859,7 +859,9 @@ int cpu_exec(CPUState *cpu)
     _nThreadStop = 0;
     _pIsaQueue = g_async_queue_new();
     // Start the dumper thread.
-    //pthread_create(&logThreadID, NULL, log_pc, NULL);
+    if (_pDumpThreadID == 0) {
+        pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
+    }
 
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)) {
@@ -887,7 +889,7 @@ int cpu_exec(CPUState *cpu)
 
             // VIGGY: Log ISA here...
             g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
-            log_pc(NULL);
+            //log_pc(NULL);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */
@@ -897,7 +899,7 @@ int cpu_exec(CPUState *cpu)
 
     //_nThreadStop = 1;
     //pthread_join(logThreadID, NULL);
-    g_async_queue_unref(_pIsaQueue);
+    //g_async_queue_unref(_pIsaQueue);
 
     cc->cpu_exec_exit(cpu);
     rcu_read_unlock();

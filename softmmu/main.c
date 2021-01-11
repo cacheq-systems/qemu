@@ -49,6 +49,8 @@ FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+pthread_t _pDumpThreadID = 0;
+uint8_t _nThreadStop = 0;
 
 int main(int argc, char **argv, char **envp)
 {
@@ -61,24 +63,28 @@ int main(int argc, char **argv, char **envp)
     _pPCZStrm->zfree = Z_NULL;
     _pPCZStrm->opaque = Z_NULL;
     deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
-    _pTBLog = fopen("tb-data.bin", "w+b");
+    //_pTBLog = fopen("tb-data.bin", "w+b");
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    fwrite(&tmpVal, 4, 1, _pTBLog);
+    //fwrite(&tmpVal, 4, 1, _pTBLog);
 
     qemu_main_loop();
 
     if (_pPCLog != NULL) {
         dumpValCompressed(0, 0);
         dumpValCompressed(0, 1);
+
+        _nThreadStop = 1;
+        pthread_join(_pDumpThreadID, NULL);
+
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);
         free(_pPCZStrm);
     }
-    fclose(_pTBLog);
+    //fclose(_pTBLog);
 
     qemu_cleanup();
 
