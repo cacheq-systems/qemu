@@ -37,6 +37,7 @@
 #include <sched.h>
 #include <sys/timex.h>
 #include <sys/socket.h>
+#include <linux/sockios.h>
 #include <sys/un.h>
 #include <sys/uio.h>
 #include <poll.h>
@@ -251,11 +252,12 @@ static type name (type1 arg1,type2 arg2,type3 arg3,type4 arg4,type5 arg5,	\
 #endif
 
 #ifdef __NR_gettid
-_syscall0(int, gettid)
+#define __NR_sys_gettid __NR_gettid
+_syscall0(int, sys_gettid)
 #else
 /* This is a replacement for the host gettid() and must return a host
    errno. */
-static int gettid(void) {
+static int sys_gettid(void) {
     return -ENOSYS;
 }
 #endif
@@ -6312,7 +6314,7 @@ static void *clone_func(void *arg)
     cpu = ENV_GET_CPU(env);
     thread_cpu = cpu;
     ts = (TaskState *)cpu->opaque;
-    info->tid = gettid();
+    info->tid = sys_gettid();
     task_settid(ts);
     if (info->child_tidptr)
         put_user_u32(info->tid, info->child_tidptr);
@@ -6457,9 +6459,9 @@ static int do_fork(CPUArchState *env, unsigned int flags, abi_ulong newsp,
                mapping.  We can't repeat the spinlock hack used above because
                the child process gets its own copy of the lock.  */
             if (flags & CLONE_CHILD_SETTID)
-                put_user_u32(gettid(), child_tidptr);
+                put_user_u32(sys_gettid(), child_tidptr);
             if (flags & CLONE_PARENT_SETTID)
-                put_user_u32(gettid(), parent_tidptr);
+                put_user_u32(sys_gettid(), parent_tidptr);
             ts = (TaskState *)cpu->opaque;
             if (flags & CLONE_SETTLS)
                 cpu_set_tls (env, newtls);
@@ -8316,7 +8318,17 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             time_t host_time;
             if (get_user_sal(host_time, arg1))
                 goto efault;
+#if defined(__GNU_LIBRARY__)
+#if (__GLIBC__ >=2) && (__GLIBC_MINOR__ > 30)
+            struct timespec ts = {};
+            ts.tv_sec = host_time;
+            ret = get_errno(clock_settime(CLOCK_REALTIME, &ts));
+#else
             ret = get_errno(stime(&host_time));
+#endif
+#else
+            ret = get_errno(stime(&host_time));
+#endif
         }
         break;
 #endif
@@ -11672,7 +11684,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         break;
 #endif
     case TARGET_NR_gettid:
-        ret = get_errno(gettid());
+        ret = get_errno(sys_gettid());
         break;
 #ifdef TARGET_NR_readahead
     case TARGET_NR_readahead:
