@@ -36,6 +36,9 @@
 #endif
 #include "sysemu/cpus.h"
 #include "sysemu/replay.h"
+ // VIGGY:
+#include "disas/target-isa.h"
+#include "zlib.h"
 
 /* -icount align implementation. */
 
@@ -664,6 +667,125 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 #endif
 }
 
+// VIGGY:
+void dumpValCompressed(uint32_t val, uint8_t bForce);
+
+static GAsyncQueue *_pIsaQueue;
+FILE *_pPCLog = NULL;
+z_stream *_pPCZStrm = NULL;
+pthread_t _pDumpThreadID = 0;
+//uint8_t _nThreadStop = 0;
+#define TMP_BUF_SIZE 32768
+
+typedef struct {
+    uint32_t _tmpLogBuf[TMP_BUF_SIZE];
+    uint32_t _nSize;
+} LogBuffer;
+
+void dumpValCompressed(uint32_t val, uint8_t bForce)
+{
+    static LogBuffer logBufPC = { {0}, 0 };
+    if (_pPCLog != NULL) {
+        if (!bForce && (logBufPC._nSize < TMP_BUF_SIZE)) {
+            logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+            ++logBufPC._nSize;
+        }
+        else {
+            unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
+            unsigned int compSize;
+            // Compress the buffer...
+            _pPCZStrm->avail_in = logBufPC._nSize * sizeof(uint32_t);
+            _pPCZStrm->next_in = (Bytef *)logBufPC._tmpLogBuf;
+            do {
+                _pPCZStrm->avail_out = TMP_BUF_SIZE * sizeof(uint32_t);
+                _pPCZStrm->next_out = tmpBuf;
+                deflate(_pPCZStrm, (bForce) ? Z_FINISH : Z_SYNC_FLUSH);
+                compSize = (TMP_BUF_SIZE * sizeof(uint32_t)) - _pPCZStrm->avail_out;
+                fwrite(&tmpBuf, 1, compSize, _pPCLog);
+            } while (_pPCZStrm->avail_out == 0);
+
+            // Reset the buffer
+            logBufPC._nSize = 0;
+        }
+    }
+}
+static void *log_pc(void *pArgs)
+{
+    static uint32_t lastPC = 0;
+    static uint32_t numInsns = 0;
+
+    //int zRet;
+
+    TargetIsaData *pData;
+
+    //static uint64_t numWritten = 0;
+    if (_pPCLog == NULL) {
+        // VIGGY: Open TB/PC dump log files...
+        _pPCLog = fopen("pc-data.bin", "w+b");
+        //_pTBLog = fopen("tb-data.bin", "w+b");
+        // Write a header...
+        uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
+        fwrite(&tmpVal, 4, 1, _pPCLog);
+        //fwrite(&tmpVal, 4, 1, _pTBLog);
+        tmpVal = 1000;
+        fwrite(&tmpVal, 4, 1, _pPCLog);
+        //fwrite(&tmpVal, 4, 1, _pTBLog);
+        _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
+        _pPCZStrm->zalloc = Z_NULL;
+        _pPCZStrm->zfree = Z_NULL;
+        _pPCZStrm->opaque = Z_NULL;
+        deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+    }
+
+    //if (numWritten < 3000000) {
+    //for (;;) {
+        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+        if ((pData != NULL) && (_pPCLog != NULL)) {
+            if (lastPC == 0) {
+                // Begining...
+                lastPC = pData->_pc_start_addr;
+                numInsns = pData->_insns_size;
+            }
+            else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
+                numInsns += pData->_insns_size;
+            }
+            else {
+                int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+                //if (zRet == Z_OK) {
+                dumpValCompressed(relPC, 0);
+                dumpValCompressed(numInsns, 0);
+                //++numWritten;
+            //}
+            //else {
+            //    fwrite(&lastPC, 4, 1, _pPCLog);
+            //    fwrite(&numInsns, 4, 1, _pPCLog);
+            //    ++numWritten;
+            //}
+                lastPC = pData->_pc_start_addr;
+                numInsns = pData->_insns_size;
+            }
+        }
+        //if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
+        //    break;
+        //}
+        //else {
+        //    //sleep(1000);
+        //}
+    //}
+    //else {
+    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+    //    if ((pData != NULL) && (_pPCLog != NULL)) {
+    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
+    //        dumpValCompressed(relPC, 0);
+    //        dumpValCompressed(numInsns, 1);
+    //    }
+    //    if (_pPCLog != NULL) {
+    //        fclose(_pPCLog);
+    //        _pPCLog = NULL;
+    //    }
+    //}
+    return NULL;
+}
 /* main execution loop */
 
 int cpu_exec(CPUState *cpu)
@@ -709,6 +831,14 @@ int cpu_exec(CPUState *cpu)
             qemu_mutex_unlock_iothread();
         }
     }
+    // VIGGY:
+    // Start the dumper thread.
+    if (_pDumpThreadID == 0) {
+    //    _nThreadStop = 0;
+        _pIsaQueue = g_async_queue_new();
+        _pDumpThreadID = 1;
+    //    pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
+    }
 
     /* if an exception is pending, we execute it here */
     while (!cpu_handle_exception(cpu, &ret)) {
@@ -732,11 +862,20 @@ int cpu_exec(CPUState *cpu)
 
             tb = tb_find(cpu, last_tb, tb_exit, cflags);
             cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit);
+
+            // VIGGY: Log ISA here...
+            g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
+            log_pc(NULL);
+
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
         }
     }
+
+    //_nThreadStop = 1;
+    //pthread_join(logThreadID, NULL);
+    //g_async_queue_unref(_pIsaQueue);
 
     cc->cpu_exec_exit(cpu);
     rcu_read_unlock();

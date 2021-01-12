@@ -1290,7 +1290,7 @@ void cpu_loop(CPUPPCState *env)
     target_siginfo_t info;
     int trapnr;
     target_ulong ret;
-
+    
     for(;;) {
         cpu_exec_start(cs);
         trapnr = cpu_exec(cs);
@@ -4540,7 +4540,7 @@ int main(int argc, char **argv, char **envp)
     int i;
     int ret;
     int execfd;
-
+        
     module_call_init(MODULE_INIT_TRACE);
     qemu_init_cpu_list();
     module_call_init(MODULE_INIT_QOM);
@@ -5145,6 +5145,7 @@ int main(int argc, char **argv, char **envp)
         gdb_handlesig(cpu, 0);
     }
     cpu_loop(env);
+
     /* never exits */
     return 0;
 }

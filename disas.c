@@ -8,6 +8,9 @@
 #include "disas/disas.h"
 #include "disas/capstone.h"
 
+// VIGGY:
+#include "disas/target-isa.h"
+
 typedef struct CPUDebug {
     struct disassemble_info info;
     CPUState *cpu;
@@ -291,6 +294,74 @@ static void cap_dump_insn(disassemble_info *info, cs_insn *insn)
     }
 }
 
+// VIGGY: Disassemble at PC, annotate data in TB...
+extern FILE *_pTBLog;
+bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
+    uint64_t pc, size_t size)
+{
+    uint8_t cap_buf[1024];
+    csh handle;
+    cs_insn *insn;
+    size_t csize = 0;
+
+    if (cap_disas_start(info, &handle) != CS_ERR_OK) {
+        return false;
+    }
+    insn = cap_insn;
+
+    while (1) {
+        size_t tsize = MIN(sizeof(cap_buf) - csize, size);
+        const uint8_t *cbuf = cap_buf;
+
+        info->read_memory_func(pc + csize, cap_buf + csize, tsize, info);
+        csize += tsize;
+        size -= tsize;
+
+        while (cs_disasm_iter(handle, &cbuf, &csize, &pc, insn)) {
+            cap_annot8_insn(targIsa, info, insn);
+        }
+
+        /* If the target memory is not consumed, go back for more... */
+        if (size != 0) {
+            /*
+             * ... taking care to move any remaining fractional insn
+             * to the beginning of the buffer.
+             */
+            if (csize != 0) {
+                memmove(cap_buf, cbuf, csize);
+            }
+            continue;
+        }
+
+        /*
+         * Since the target memory is consumed, we should not have
+         * a remaining fractional insn.
+         */
+        if (csize != 0) {
+            info->fprintf_func(info->stream,
+                "Disassembler disagrees with translator "
+                "over instruction decoding\n"
+                "Please report this to qemu-devel@nongnu.org\n");
+        }
+        break;
+    }
+
+    // Open the TB log, and log it.
+    if (_pTBLog != NULL) {
+        fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
+        fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        for (int i = 0; i < targIsa->_insns_size; ++i) {
+            TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
+            for (int j = 0; j < pInsn->_size; ++j) {
+                fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+            }
+        }
+        //fflush(_pTBLog);
+    }
+    cs_close(&handle);
+    return true;
+}
+
 /* Disassemble SIZE bytes at PC for the target.  */
 static bool cap_disas_target(disassemble_info *info, uint64_t pc, size_t size)
 {
@@ -418,7 +489,44 @@ static bool cap_disas_monitor(disassemble_info *info, uint64_t pc, int count)
 # define cap_disas_target(i, p, s)  false
 # define cap_disas_host(i, p, s)  false
 # define cap_disas_monitor(i, p, c)  false
+# define cap_disas_annot8(t, i, p, s) false
 #endif /* CONFIG_CAPSTONE */
+
+// VIGGY: Disassemble, and annotate the TB...
+void annot8_target_disas(CPUState *cpu, TargetIsaData *targIsa,
+    target_ulong code, target_ulong size)
+{
+    CPUClass *cc = CPU_GET_CLASS(cpu);
+    target_ulong pc;
+    int count;
+    CPUDebug s;
+
+    INIT_DISASSEMBLE_INFO(s.info, NULL, fprintf);
+
+    s.cpu = cpu;
+    s.info.read_memory_func = target_read_memory;
+    s.info.buffer_vma = code;
+    s.info.buffer_length = size;
+    s.info.print_address_func = generic_print_address;
+    s.info.cap_arch = -1;
+    s.info.cap_mode = 0;
+    s.info.cap_insn_unit = 4;
+    s.info.cap_insn_split = 4;
+
+#ifdef TARGET_WORDS_BIGENDIAN
+    s.info.endian = BFD_ENDIAN_BIG;
+#else
+    s.info.endian = BFD_ENDIAN_LITTLE;
+#endif
+
+    if (cc->disas_set_info) {
+        cc->disas_set_info(cpu, &s.info);
+    }
+
+    if (s.info.cap_arch >= 0 && cap_disas_annot8(targIsa, &s.info, code, size)) {
+        return;
+    }
+}
 
 /* Disassemble this for me please... (debugging).  */
 void target_disas(FILE *out, CPUState *cpu, target_ulong code,

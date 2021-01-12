@@ -58,6 +58,8 @@
 #include "qemu/main-loop.h"
 #include "exec/log.h"
 #include "sysemu/cpus.h"
+ // VIGGY:
+#include "disas/target-isa.h"
 
 /* #define DEBUG_TB_INVALIDATE */
 /* #define DEBUG_TB_FLUSH */
@@ -832,6 +834,13 @@ static TranslationBlock *tb_alloc(target_ulong pc)
 void tb_remove(TranslationBlock *tb)
 {
     assert_tb_locked();
+
+    // VIGGY: Free ISA data
+    if (tb->_p_isa_data->_p_tb_exec_time != NULL) {
+        g_array_free(tb->_p_isa_data->_p_tb_exec_time, TRUE);
+    }
+    g_array_free(tb->_p_isa_data->_p_isa_insns, TRUE);
+    free(tb->_p_isa_data);
 
     g_tree_remove(tb_ctx.tb_tree, &tb->tc);
 }

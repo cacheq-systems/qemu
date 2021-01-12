@@ -7413,6 +7413,12 @@ static void ppc_tr_disas_log(const DisasContextBase *dcbase, CPUState *cs)
     log_target_disas(cs, dcbase->pc_first, dcbase->tb->size);
 }
 
+static void ppc_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Fill out the TB with ISA data...
+    annot8_target_tb(cpu, dcbase->tb->_p_isa_data, dcbase->pc_first, dcbase->tb->size);
+}
+
 static const TranslatorOps ppc_tr_ops = {
     .init_disas_context = ppc_tr_init_disas_context,
     .tb_start           = ppc_tr_tb_start,
@@ -7421,6 +7427,7 @@ static const TranslatorOps ppc_tr_ops = {
     .translate_insn     = ppc_tr_translate_insn,
     .tb_stop            = ppc_tr_tb_stop,
     .disas_log          = ppc_tr_disas_log,
+    .tb_annot8          = ppc_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)

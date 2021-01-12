@@ -22,6 +22,8 @@
 #include "exec/exec-all.h"
 #include "tcg/tcg.h"
 
+ // VIGGY:
+typedef struct TargetIsaData TargetIsaData;
 
 /**
  * DisasJumpType:
@@ -115,6 +117,8 @@ typedef struct TranslatorOps {
     void (*translate_insn)(DisasContextBase *db, CPUState *cpu);
     void (*tb_stop)(DisasContextBase *db, CPUState *cpu);
     void (*disas_log)(const DisasContextBase *db, CPUState *cpu);
+    // VIGGY:
+    void(*tb_annot8)(DisasContextBase *db, CPUState *cpu);
 } TranslatorOps;
 
 /**

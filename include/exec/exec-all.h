@@ -387,6 +387,8 @@ struct TranslationBlock {
      */
     uintptr_t jmp_list_next[2];
     uintptr_t jmp_list_first;
+
+    struct TargetIsaData *_p_isa_data;  /* Target isa data */
 };
 
 extern bool parallel_cpus;

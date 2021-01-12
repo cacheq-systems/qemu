@@ -60,6 +60,9 @@
 #include "exec/log.h"
 #include "sysemu/sysemu.h"
 
+// VIGGY:
+#include "disas/target-isa.h"
+
 /* Forward declarations for functions declared in tcg-target.inc.c and
    used here. */
 static void tcg_target_init(TCGContext *s);
@@ -780,6 +783,16 @@ TranslationBlock *tcg_tb_alloc(TCGContext *s)
     }
     atomic_set(&s->code_gen_ptr, next);
     s->data_gen_ptr = NULL;
+
+    // VIGGY: Initialize isa data...
+    tb->_p_isa_data = (TargetIsaData *)malloc(sizeof(TargetIsaData));
+    tb->_p_isa_data->_p_tb_exec_time = NULL;
+    tb->_p_isa_data->_pc_start_addr = 0;
+    tb->_p_isa_data->_tb_state = TARG_ISA_TB_LINEAR;
+    tb->_p_isa_data->_p_isa_insns = g_array_new(FALSE, FALSE, sizeof(TargetInsn));
+    tb->_p_isa_data->_insns_size = 0;
+    tb->_p_isa_data->_time_size = 0;
+
     return tb;
 }
 

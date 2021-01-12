@@ -18,6 +18,9 @@
 #include "exec/log.h"
 #include "exec/translator.h"
 
+ // VIGGY:
+#include "disas/target-isa.h"
+
 /* Pairs with tcg_clear_temp_count.
    To be called by #TranslatorOps.{translate_insn,tb_stop} if
    (1) the target is sufficiently clean to support reporting,
@@ -124,6 +127,11 @@ void translator_loop(const TranslatorOps *ops, DisasContextBase *db,
     /* The disas_log hook may use these values rather than recompute.  */
     db->tb->size = db->pc_next - db->pc_first;
     db->tb->icount = db->num_insns;
+
+    // VIGGY: Populate the TB with ISA data.
+    db->tb->_p_isa_data->_pc_start_addr = db->pc_first;
+    db->tb->_p_isa_data->_pc_size = db->pc_next - db->pc_first;
+    ops->tb_annot8(db, cpu);
 
 #ifdef DEBUG_DISAS
     if (qemu_loglevel_mask(CPU_LOG_TB_IN_ASM)

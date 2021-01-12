@@ -4894,6 +4894,11 @@ static void hppa_tr_disas_log(const DisasContextBase *dcbase, CPUState *cs)
     log_target_disas(cs, pc, dcbase->tb->size);
 }
 
+static void hppa_tr_tb_annot8(DisasContextBase *dcbase, CPUState *cpu)
+{
+    // VIGGY: Do nothing.
+}
+
 static const TranslatorOps hppa_tr_ops = {
     .init_disas_context = hppa_tr_init_disas_context,
     .tb_start           = hppa_tr_tb_start,
@@ -4902,6 +4907,7 @@ static const TranslatorOps hppa_tr_ops = {
     .translate_insn     = hppa_tr_translate_insn,
     .tb_stop            = hppa_tr_tb_stop,
     .disas_log          = hppa_tr_disas_log,
+    .tb_annot8          = hppa_tr_tb_annot8,
 };
 
 void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)

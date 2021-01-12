@@ -53,6 +53,8 @@
 #include "hw/nmi.h"
 #include "sysemu/replay.h"
 #include "hw/boards.h"
+// VIGGY:
+#include <zlib.h>
 
 #ifdef CONFIG_LINUX
 
@@ -2019,8 +2021,25 @@ void cpu_stop_current(void)
     }
 }
 
+// VIGGY:
+void dumpValCompressed(uint32_t val, uint8_t bForce);
+
+extern FILE *_pPCLog;
+extern z_stream *_pPCZStrm;
 int vm_stop(RunState state)
 {
+    if (_pPCLog != NULL) {
+        dumpValCompressed(0, 0);
+        dumpValCompressed(0, 1);
+
+        //_nThreadStop = 1;
+        //pthread_join(_pDumpThreadID, NULL);
+
+        fclose(_pPCLog);
+        deflateEnd(_pPCZStrm);
+        free(_pPCZStrm);
+    }
+
     if (qemu_in_vcpu_thread()) {
         qemu_system_vmstop_request_prepare();
         qemu_system_vmstop_request(state);
