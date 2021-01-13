@@ -294,6 +294,17 @@ static void cap_dump_insn(disassemble_info *info, cs_insn *insn)
     }
 }
 
+static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
+    cs_insn *insn)
+{
+    TargetInsn insnData;
+
+    insnData._size = insn->size;
+    memcpy(&insnData._bytes, &insn->bytes, sizeof(insnData._bytes));
+    g_array_append_val(targIsa->_p_isa_insns, insnData);
+    ++targIsa->_insns_size;
+}
+
 // VIGGY: Disassemble at PC, annotate data in TB...
 extern FILE *_pTBLog;
 bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
@@ -497,8 +508,6 @@ void annot8_target_disas(CPUState *cpu, TargetIsaData *targIsa,
     target_ulong code, target_ulong size)
 {
     CPUClass *cc = CPU_GET_CLASS(cpu);
-    target_ulong pc;
-    int count;
     CPUDebug s;
 
     INIT_DISASSEMBLE_INFO(s.info, NULL, fprintf);

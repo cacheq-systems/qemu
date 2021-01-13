@@ -2026,6 +2026,8 @@ void dumpValCompressed(uint32_t val, uint8_t bForce);
 
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
+extern FILE *_pTBLog;
+extern z_stream *_pTBZstrm;
 int vm_stop(RunState state)
 {
     if (_pPCLog != NULL) {
@@ -2038,6 +2040,11 @@ int vm_stop(RunState state)
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);
         free(_pPCZStrm);
+    }
+    if (_pTBLog != NULL) {
+        fclose(_pTBLog);
+        deflateEnd(_pTBZstrm);
+        free(_pTBZstrm);
     }
 
     if (qemu_in_vcpu_thread()) {

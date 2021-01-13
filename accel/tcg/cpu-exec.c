@@ -675,6 +675,8 @@ FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
 pthread_t _pDumpThreadID = 0;
 //uint8_t _nThreadStop = 0;
+FILE *_pTBLog = NULL;
+z_stream *_pTBZstrm = NULL;
 #define TMP_BUF_SIZE 32768
 
 typedef struct {
@@ -730,6 +732,7 @@ static void *log_pc(void *pArgs)
         tmpVal = 1000;
         fwrite(&tmpVal, 4, 1, _pPCLog);
         //fwrite(&tmpVal, 4, 1, _pTBLog);
+
         _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
         _pPCZStrm->zalloc = Z_NULL;
         _pPCZStrm->zfree = Z_NULL;
