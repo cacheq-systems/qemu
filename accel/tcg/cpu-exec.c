@@ -705,43 +705,51 @@ extern FILE *_pPCLog;
 static uint8_t _nThreadStop;
 static void *log_pc(void *pArgs)
 {
-    static uint8_t start = 1;
+//    static uint8_t start = 1;
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;
+//    int32_t relPC;
+//    uint32_t last_end_PC;
+    uint32_t tmpVal;
     TargetIsaData *pData;
 
-    //for (;;) {
-        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-        if ((pData != NULL) && (_pPCLog != NULL)) {
-            if (lastPC == 0) {
-                // Begining...
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
-            else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
-                numInsns += pData->_insns_size;
-            }
-            else {
-                int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-                if (start == 1) {
-                    start = 0;
-                    fwrite(&lastPC, 4, 1, _pPCLog);
-                }
-                else {
-                    fwrite(&relPC, 4, 1, _pPCLog);
-                }
-                fwrite(&numInsns, 4, 1, _pPCLog);
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
+    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+    if ((pData != NULL) && (_pPCLog != NULL)) {
+        if (lastPC == 0) {
+            // Begining...
+            lastPC = pData->_pc_start_addr;
+            numInsns = pData->_insns_size;
         }
-        //if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
-        //    break;
-        //}
-        //else {
-        //    //sleep(1000);
-        //}
-    //}
+//        else if ((lastPC + (numInsns * sizeof(uint32_t))) == pData->_pc_start_addr) {
+//            numInsns += pData->_insns_size;
+//        }
+        else {
+//            last_end_PC = lastPC + (numInsns - 1) * sizeof(uint32_t);
+//            relPC = pData->_pc_start_addr - last_end_PC;
+            
+//            printf( "lastPC = %08X : last_end_PC = %08X, numInsns = %2d --> pData->_pc_start_addr = %08X : relPC = %08X.\n",
+//                    lastPC,
+//                    last_end_PC,
+//                    numInsns,
+//                    pData->_pc_start_addr,
+//                    relPC );
+            
+//            if (start == 0) {
+//                tmpVal = __builtin_bswap32(relPC);
+//            }
+//            else {
+//                start = 0;
+                tmpVal = __builtin_bswap32(lastPC);
+//            }
+            fwrite(&tmpVal, sizeof(uint32_t), 1, _pPCLog);
+            
+            tmpVal = __builtin_bswap32(numInsns);
+            fwrite(&tmpVal, sizeof(uint32_t), 1, _pPCLog);
+            
+            lastPC = pData->_pc_start_addr;
+            numInsns = pData->_insns_size;
+        }
+    }
     return NULL;
 }
 

@@ -241,8 +241,10 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
 
     // Open the TB log, and log it.
     if (_pTBLog != NULL) {
-        fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
-        fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        uint32_t tmpVal = __builtin_bswap32(targIsa->_pc_start_addr);
+        fwrite(&tmpVal, 4, 1, _pTBLog);
+        tmpVal = __builtin_bswap32(targIsa->_insns_size);
+        fwrite(&tmpVal, 4, 1, _pTBLog);
         for (int i = 0; i < targIsa->_insns_size; ++i) {
             TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
             for (int j = 0; j < pInsn->_size; ++j) {
