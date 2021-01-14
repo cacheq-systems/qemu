@@ -21,6 +21,7 @@
 #include "qemu-common.h"
 #include "qemu.h"
 #include "cpu_loop-common.h"
+// VIGGY:
 #include <zlib.h>
 
 static inline uint64_t cpu_ppc_get_tb(CPUPPCState *env)
@@ -72,9 +73,11 @@ int ppc_dcr_write (ppc_dcr_t *dcr_env, int dcrn, uint32_t val)
     return -1;
 }
 
+// VIGGY:
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
+z_stream *_pTBZStrm = NULL;
 pthread_t _pDumpThreadID = 0;
 uint8_t _nThreadStop = 0;
 
@@ -87,19 +90,24 @@ void cpu_loop(CPUPPCState *env)
 
     // VIGGY: Open TB/PC dump log files...
     _pPCLog = fopen("pc-data.bin", "w+b");
-    //_pTBLog = fopen("tb-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
     // Write a header...
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    //fwrite(&tmpVal, 4, 1, _pTBLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    //fwrite(&tmpVal, 4, 1, _pTBLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
     _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
     _pPCZStrm->zalloc = Z_NULL;
     _pPCZStrm->zfree = Z_NULL;
     _pPCZStrm->opaque = Z_NULL;
     deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+    _pTBZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pTBZStrm->zalloc = Z_NULL;
+    _pTBZStrm->zfree = Z_NULL;
+    _pTBZStrm->opaque = Z_NULL;
+    deflateInit(_pTBZStrm, Z_DEFAULT_COMPRESSION);
     for(;;) {
         bool arch_interrupt;
 

@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
+z_stream *_pTBZStrm = NULL;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
 pthread_t _pDumpThreadID = 0;
 uint8_t _nThreadStop = 0;
@@ -63,13 +64,18 @@ int main(int argc, char **argv, char **envp)
     _pPCZStrm->zfree = Z_NULL;
     _pPCZStrm->opaque = Z_NULL;
     deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
-    //_pTBLog = fopen("tb-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
+    _pTBZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pTBZStrm->zalloc = Z_NULL;
+    _pTBZStrm->zfree = Z_NULL;
+    _pTBZStrm->opaque = Z_NULL;
+    deflateInit(_pTBZStrm, Z_DEFAULT_COMPRESSION);
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    //fwrite(&tmpVal, 4, 1, _pTBLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
     tmpVal = 1000;
     fwrite(&tmpVal, 4, 1, _pPCLog);
-    //fwrite(&tmpVal, 4, 1, _pTBLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
 
     qemu_main_loop();
 
@@ -77,12 +83,29 @@ int main(int argc, char **argv, char **envp)
         dumpValCompressed(0, 0);
         dumpValCompressed(0, 1);
 
+        uint32_t tmpBuf[2] = { 0, 0 };
+        uint32_t tbCompLogbuf[65536] = { 0 };
+        unsigned int compSize;
+        // Compress the buffer...
+        _pTBZStrm->avail_in = sizeof(tmpBuf);
+        _pTBZStrm->next_in = (Bytef *)tmpBuf;
+        do {
+            _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
+            _pTBZStrm->next_out = (Bytef *)tbCompLogbuf;
+            deflate(_pTBZStrm, Z_SYNC_FLUSH);
+            compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
+            fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
+        } while (_pTBZStrm->avail_out == 0);
+
         _nThreadStop = 1;
         pthread_join(_pDumpThreadID, NULL);
 
         fclose(_pPCLog);
+        fclose(_pTBLog);
         deflateEnd(_pPCZStrm);
+        deflateEnd(_pTBZStrm);
         free(_pPCZStrm);
+        free(_pTBZStrm);
     }
     //fclose(_pTBLog);
 

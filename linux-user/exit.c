@@ -30,6 +30,7 @@ extern void __gcov_dump(void);
 extern FILE *_pTBLog;
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
+extern z_stream *_pTBZStrm;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
 extern pthread_t _pDumpThreadID;
 extern uint8_t _nThreadStop;
@@ -43,7 +44,22 @@ void preexit_cleanup(CPUArchState *env, int code)
         __gcov_dump();
 #endif
         if (_pTBLog != NULL) {
+            uint32_t tmpBuf[2] = { 0, 0 };
+            uint32_t tbCompLogbuf[65536] = { 0 };
+            unsigned int compSize;
+            // Compress the buffer...
+            _pTBZStrm->avail_in = sizeof(tmpBuf);
+            _pTBZStrm->next_in = (Bytef *)tmpBuf;
+            do {
+                _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
+                _pTBZStrm->next_out = (Bytef *)tbCompLogbuf;
+                deflate(_pTBZStrm, Z_SYNC_FLUSH);
+                compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
+                fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
+            } while (_pTBZStrm->avail_out == 0);
             fclose(_pTBLog);
+            deflateEnd(_pTBZStrm);
+            free(_pTBZStrm);
         }
         if (_pPCLog != NULL) {
             dumpValCompressed(0, 0);
@@ -56,6 +72,7 @@ void preexit_cleanup(CPUArchState *env, int code)
         }
         if (_pPCZStrm != NULL) {
             deflateEnd(_pPCZStrm);
+            free(_pPCZStrm);
         }
         gdb_exit(env, code);
         qemu_plugin_atexit_cb();

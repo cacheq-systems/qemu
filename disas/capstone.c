@@ -10,6 +10,7 @@
 
 // VIGGY:
 #include "disas/target-isa.h"
+#include <zlib.h>
 
 /*
  * Temporary storage for the capstone library.  This will be alloced via
@@ -189,6 +190,7 @@ static void cap_dump_insn(disassemble_info *info, cs_insn *insn)
 
 // VIGGY: Disassemble at PC, annotate data in TB...
 extern FILE *_pTBLog;
+extern z_stream *_pTBZStrm;
 bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     uint64_t pc, size_t size)
 {
@@ -196,6 +198,9 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     csh handle;
     cs_insn *insn;
     size_t csize = 0;
+    static uint8_t tbLogbuf[65536];
+    static uint8_t tbCompLogbuf[65536];
+    static uint32_t tbLogbufSz;
 
     if (cap_disas_start(info, &handle) != CS_ERR_OK) {
         return false;
@@ -241,14 +246,29 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
 
     // Open the TB log, and log it.
     if (_pTBLog != NULL) {
-        fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
-        fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        //fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
+        //fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        tbLogbufSz = 8;
+        ((uint32_t *)tbLogbuf)[0] = targIsa->_pc_start_addr;
+        ((uint32_t *)tbLogbuf)[1] = targIsa->_insns_size;
         for (int i = 0; i < targIsa->_insns_size; ++i) {
             TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
             for (int j = 0; j < pInsn->_size; ++j) {
-                fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+                //fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+                tbLogbuf[tbLogbufSz++] = pInsn->_bytes[j];
             }
         }
+        unsigned int compSize;
+        // Compress the buffer...
+        _pTBZStrm->avail_in = tbLogbufSz;
+        _pTBZStrm->next_in = (Bytef *)tbLogbuf;
+        do {
+            _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
+            _pTBZStrm->next_out = tbCompLogbuf;
+            deflate(_pTBZStrm, Z_SYNC_FLUSH);
+            compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
+            fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
+        } while (_pTBZStrm->avail_out == 0);
         //fflush(_pTBLog);
     }
     cs_close(&handle);

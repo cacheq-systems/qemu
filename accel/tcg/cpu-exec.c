@@ -856,10 +856,10 @@ int cpu_exec(CPUState *cpu)
     }
 
     // VIGGY:
-    _nThreadStop = 0;
-    _pIsaQueue = g_async_queue_new();
     // Start the dumper thread.
     if (_pDumpThreadID == 0) {
+        _nThreadStop = 0;
+        _pIsaQueue = g_async_queue_new();
         pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
     }
 
