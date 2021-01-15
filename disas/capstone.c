@@ -249,8 +249,8 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
         //fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
         //fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
         tbLogbufSz = 8;
-        ((uint32_t *)tbLogbuf)[0] = targIsa->_pc_start_addr;
-        ((uint32_t *)tbLogbuf)[1] = targIsa->_insns_size;
+        ((uint32_t *)tbLogbuf)[0] = __builtin_bswap32(targIsa->_pc_start_addr);
+        ((uint32_t *)tbLogbuf)[1] = __builtin_bswap32(targIsa->_insns_size);
         for (int i = 0; i < targIsa->_insns_size; ++i) {
             TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
             for (int j = 0; j < pInsn->_size; ++j) {
