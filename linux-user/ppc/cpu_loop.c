@@ -95,7 +95,7 @@ void cpu_loop(CPUPPCState *env)
     uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
     fwrite(&tmpVal, 4, 1, _pPCLog);
     fwrite(&tmpVal, 4, 1, _pTBLog);
-    tmpVal = 1000;
+    tmpVal = __builtin_bswap32(1000);
     fwrite(&tmpVal, 4, 1, _pPCLog);
     fwrite(&tmpVal, 4, 1, _pTBLog);
     _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
