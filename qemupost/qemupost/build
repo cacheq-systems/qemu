@@ -1,0 +1,2 @@
+c++ main.cpp -o qemupost
+sudo cp qemupost /usr/local/bin
