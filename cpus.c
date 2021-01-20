@@ -2031,8 +2031,8 @@ extern z_stream *_pTBZstrm;
 int vm_stop(RunState state)
 {
     if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
+        //dumpValCompressed(0, 0);
+        //dumpValCompressed(0, 1);
 
         //_nThreadStop = 1;
         //pthread_join(_pDumpThreadID, NULL);

@@ -724,20 +724,20 @@ static void *log_pc(void *pArgs)
     if (_pPCLog == NULL) {
         // VIGGY: Open TB/PC dump log files...
         _pPCLog = fopen("pc-data.bin", "w+b");
-        //_pTBLog = fopen("tb-data.bin", "w+b");
+        _pTBLog = fopen("tb-data.bin", "w+b");
         // Write a header...
         uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
         fwrite(&tmpVal, 4, 1, _pPCLog);
-        //fwrite(&tmpVal, 4, 1, _pTBLog);
-        tmpVal = 1000;
+        fwrite(&tmpVal, 4, 1, _pTBLog);
+        tmpVal = __builtin_bswap32(1000);
         fwrite(&tmpVal, 4, 1, _pPCLog);
-        //fwrite(&tmpVal, 4, 1, _pTBLog);
+        fwrite(&tmpVal, 4, 1, _pTBLog);
 
-        _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
-        _pPCZStrm->zalloc = Z_NULL;
-        _pPCZStrm->zfree = Z_NULL;
-        _pPCZStrm->opaque = Z_NULL;
-        deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+        //_pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
+        //_pPCZStrm->zalloc = Z_NULL;
+        //_pPCZStrm->zfree = Z_NULL;
+        //_pPCZStrm->opaque = Z_NULL;
+        //deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
     }
 
     //if (numWritten < 3000000) {
@@ -755,8 +755,10 @@ static void *log_pc(void *pArgs)
             else {
                 int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
                 //if (zRet == Z_OK) {
-                dumpValCompressed(__builtin_bswap32(relPC), 0);
-                dumpValCompressed(__builtin_bswap32(numInsns), 0);
+                //dumpValCompressed(__builtin_bswap32(relPC), 0);
+                //dumpValCompressed(__builtin_bswap32(numInsns), 0);
+                fwrite(&relPC, 4, 1, _pPCLog);
+                fwrite(&numInsns, 4, 1, _pPCLog);
                 //++numWritten;
             //}
             //else {
