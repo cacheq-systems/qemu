@@ -54,6 +54,14 @@ int main(int argc, char **argv, char **envp)
     _pPCLog = fopen("pc-data.bin", "w+b");
     _pTBLog = fopen("tb-data.bin", "w+b");
 
+    // Write a header...
+    uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
+    fwrite(&tmpVal, 4, 1, _pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
+    tmpVal = __builtin_bswap32(1000);
+    fwrite(&tmpVal, 4, 1, _pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
+
     qemu_main_loop();
 
     fclose(_pPCLog);
