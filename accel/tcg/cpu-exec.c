@@ -716,8 +716,6 @@ static void *log_pc(void *pArgs)
     static uint32_t lastPC = 0;
     static uint32_t numInsns = 0;
 
-    //int zRet;
-
     TargetIsaData *pData;
 
     //static uint64_t numWritten = 0;
@@ -733,11 +731,11 @@ static void *log_pc(void *pArgs)
         fwrite(&tmpVal, 4, 1, _pPCLog);
         fwrite(&tmpVal, 4, 1, _pTBLog);
 
-        //_pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
-        //_pPCZStrm->zalloc = Z_NULL;
-        //_pPCZStrm->zfree = Z_NULL;
-        //_pPCZStrm->opaque = Z_NULL;
-        //deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+        _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
+        _pPCZStrm->zalloc = Z_NULL;
+        _pPCZStrm->zfree = Z_NULL;
+        _pPCZStrm->opaque = Z_NULL;
+        deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
     }
 
     //if (numWritten < 3000000) {
@@ -754,11 +752,10 @@ static void *log_pc(void *pArgs)
             }
             else {
                 int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-                //if (zRet == Z_OK) {
-                //dumpValCompressed(__builtin_bswap32(relPC), 0);
-                //dumpValCompressed(__builtin_bswap32(numInsns), 0);
-                fwrite(&relPC, 4, 1, _pPCLog);
-                fwrite(&numInsns, 4, 1, _pPCLog);
+                dumpValCompressed(__builtin_bswap32(relPC), 0);
+                dumpValCompressed(__builtin_bswap32(numInsns), 0);
+                //fwrite(&relPC, 4, 1, _pPCLog);
+                //fwrite(&numInsns, 4, 1, _pPCLog);
                 //++numWritten;
             //}
             //else {
