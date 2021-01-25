@@ -676,7 +676,7 @@ z_stream *_pPCZStrm = NULL;
 pthread_t _pDumpThreadID = 0;
 //uint8_t _nThreadStop = 0;
 FILE *_pTBLog = NULL;
-z_stream *_pTBZstrm = NULL;
+z_stream *_pTBZStrm = NULL;
 #define TMP_BUF_SIZE 32768
 
 typedef struct {
@@ -736,6 +736,12 @@ static void *log_pc(void *pArgs)
         _pPCZStrm->zfree = Z_NULL;
         _pPCZStrm->opaque = Z_NULL;
         deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+
+        _pTBZStrm = (z_stream *)malloc(sizeof(z_stream));
+        _pTBZStrm->zalloc = Z_NULL;
+        _pTBZStrm->zfree = Z_NULL;
+        _pTBZStrm->opaque = Z_NULL;
+        deflateInit(_pTBZStrm, Z_DEFAULT_COMPRESSION);
     }
 
     //if (numWritten < 3000000) {

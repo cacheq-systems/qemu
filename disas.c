@@ -10,6 +10,7 @@
 
 // VIGGY:
 #include "disas/target-isa.h"
+#include <zlib.h>
 
 typedef struct CPUDebug {
     struct disassemble_info info;
@@ -307,13 +308,38 @@ static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
 
 // VIGGY: Disassemble at PC, annotate data in TB...
 extern FILE *_pTBLog;
-bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
+extern z_stream *_pTBZStrm;
+#define BUFFER_MAX 65536
+static void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
+{
+    static uint8_t compLogbuf[BUFFER_MAX];
+    //if (bufSize < BUFFER_MAX) {
+        // Pad the buffer...
+    //    memset(&pBuffer[bufSize], 0, BUFFER_MAX - bufSize);
+    //}
+    unsigned int compSize;
+    // Compress the buffer...
+    _pTBZStrm->avail_in = bufSize;
+    _pTBZStrm->next_in = (Bytef *)pBuffer;
+    do {
+        _pTBZStrm->avail_out = sizeof(compLogbuf);
+        _pTBZStrm->next_out = compLogbuf;
+        deflate(_pTBZStrm, Z_SYNC_FLUSH);
+        compSize = sizeof(compLogbuf) - _pTBZStrm->avail_out;
+        fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
+        fwrite(&compLogbuf, 1, compSize, _pTBLog);
+    } while (_pTBZStrm->avail_out == 0);
+}
+
+static bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     uint64_t pc, size_t size)
 {
     uint8_t cap_buf[1024];
     csh handle;
     cs_insn *insn;
     size_t csize = 0;
+    static uint8_t tbLogbuf[BUFFER_MAX];
+    static uint32_t tbLogbufSz;
 
     if (cap_disas_start(info, &handle) != CS_ERR_OK) {
         return false;
@@ -359,17 +385,19 @@ bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
 
     // Open the TB log, and log it.
     if (_pTBLog != NULL) {
-        uint32_t tmpVal = __builtin_bswap32(targIsa->_pc_start_addr);
-        fwrite(&tmpVal, 4, 1, _pTBLog);
-        tmpVal = __builtin_bswap32(targIsa->_insns_size);
-        fwrite(&tmpVal, 4, 1, _pTBLog);
+        //fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
+        //fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);
+        tbLogbufSz = 8;
+        ((uint32_t *)tbLogbuf)[0] = __builtin_bswap32(targIsa->_pc_start_addr);
+        ((uint32_t *)tbLogbuf)[1] = __builtin_bswap32(targIsa->_insns_size);
         for (int i = 0; i < targIsa->_insns_size; ++i) {
             TargetInsn *pInsn = &g_array_index(targIsa->_p_isa_insns, TargetInsn, i);
-            for (int j = 0; j < pInsn->_size; ++j) {
-                fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+            for (int j = 0; j < 4/*pInsn->_size*/; ++j) {
+                //fwrite(&pInsn->_bytes[j], 1, 1, _pTBLog);
+                tbLogbuf[tbLogbufSz++] = pInsn->_bytes[j];
             }
         }
-        //fflush(_pTBLog);
+        dumpTBData(tbLogbuf, tbLogbufSz);
     }
     cs_close(&handle);
     return true;
