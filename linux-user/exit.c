@@ -53,7 +53,7 @@ void preexit_cleanup(CPUArchState *env, int code)
             do {
                 _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
                 _pTBZStrm->next_out = (Bytef *)tbCompLogbuf;
-                deflate(_pTBZStrm, Z_SYNC_FLUSH);
+                deflate(_pTBZStrm, Z_FINISH);
                 compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
                 fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
             } while (_pTBZStrm->avail_out == 0);
