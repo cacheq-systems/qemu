@@ -674,7 +674,7 @@ static GAsyncQueue *_pIsaQueue;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
 pthread_t _pDumpThreadID = 0;
-//uint8_t _nThreadStop = 0;
+uint8_t _nThreadStop = 0;
 FILE *_pTBLog = NULL;
 z_stream *_pTBZStrm = NULL;
 #define TMP_BUF_SIZE 32768
@@ -745,7 +745,7 @@ static void *log_pc(void *pArgs)
     }
 
     //if (numWritten < 3000000) {
-    //for (;;) {
+    for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
             if (lastPC == 0) {
@@ -760,38 +760,11 @@ static void *log_pc(void *pArgs)
                 int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
                 dumpValCompressed(__builtin_bswap32(relPC), 0);
                 dumpValCompressed(__builtin_bswap32(numInsns), 0);
-                //fwrite(&relPC, 4, 1, _pPCLog);
-                //fwrite(&numInsns, 4, 1, _pPCLog);
-                //++numWritten;
-            //}
-            //else {
-            //    fwrite(&lastPC, 4, 1, _pPCLog);
-            //    fwrite(&numInsns, 4, 1, _pPCLog);
-            //    ++numWritten;
-            //}
                 lastPC = pData->_pc_start_addr;
                 numInsns = pData->_insns_size;
             }
         }
-        //if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
-        //    break;
-        //}
-        //else {
-        //    //sleep(1000);
-        //}
-    //}
-    //else {
-    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-    //    if ((pData != NULL) && (_pPCLog != NULL)) {
-    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-    //        dumpValCompressed(relPC, 0);
-    //        dumpValCompressed(numInsns, 1);
-    //    }
-    //    if (_pPCLog != NULL) {
-    //        fclose(_pPCLog);
-    //        _pPCLog = NULL;
-    //    }
-    //}
+    }
     return NULL;
 }
 /* main execution loop */
@@ -842,10 +815,9 @@ int cpu_exec(CPUState *cpu)
     // VIGGY:
     // Start the dumper thread.
     if (_pDumpThreadID == 0) {
-    //    _nThreadStop = 0;
+        _nThreadStop = 0;
         _pIsaQueue = g_async_queue_new();
-        _pDumpThreadID = 1;
-    //    pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
+        pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
     }
 
     /* if an exception is pending, we execute it here */
@@ -873,17 +845,13 @@ int cpu_exec(CPUState *cpu)
 
             // VIGGY: Log ISA here...
             g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
-            log_pc(NULL);
+            //log_pc(NULL);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */
             align_clocks(&sc, cpu);
         }
     }
-
-    //_nThreadStop = 1;
-    //pthread_join(logThreadID, NULL);
-    //g_async_queue_unref(_pIsaQueue);
 
     cc->cpu_exec_exit(cpu);
     rcu_read_unlock();

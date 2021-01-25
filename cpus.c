@@ -2028,14 +2028,16 @@ extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
 extern FILE *_pTBLog;
 extern z_stream *_pTBZStrm;
+extern pthread_t _pDumpThreadID;
+extern uint8_t _nThreadStop;
 int vm_stop(RunState state)
 {
     if (_pPCLog != NULL) {
         //dumpValCompressed(0, 0);
         //dumpValCompressed(0, 1);
 
-        //_nThreadStop = 1;
-        //pthread_join(_pDumpThreadID, NULL);
+        _nThreadStop = 1;
+        pthread_join(_pDumpThreadID, NULL);
 
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);
