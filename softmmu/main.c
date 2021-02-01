@@ -50,6 +50,7 @@ FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
 z_stream *_pTBZStrm = NULL;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 pthread_t _pDumpThreadID = 0;
 uint8_t _nThreadStop = 0;
 
@@ -83,19 +84,7 @@ int main(int argc, char **argv, char **envp)
         dumpValCompressed(0, 0);
         dumpValCompressed(0, 1);
 
-        uint32_t tmpBuf[2] = { 0, 0 };
-        uint32_t tbCompLogbuf[65536] = { 0 };
-        unsigned int compSize;
-        // Compress the buffer...
-        _pTBZStrm->avail_in = sizeof(tmpBuf);
-        _pTBZStrm->next_in = (Bytef *)tmpBuf;
-        do {
-            _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
-            _pTBZStrm->next_out = (Bytef *)tbCompLogbuf;
-            deflate(_pTBZStrm, Z_SYNC_FLUSH);
-            compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
-            fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
-        } while (_pTBZStrm->avail_out == 0);
+        dumpTBData(NULL, 0);
 
         _nThreadStop = 1;
         pthread_join(_pDumpThreadID, NULL);

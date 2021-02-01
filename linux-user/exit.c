@@ -32,6 +32,7 @@ extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
 extern z_stream *_pTBZStrm;
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 extern pthread_t _pDumpThreadID;
 extern uint8_t _nThreadStop;
 
@@ -44,19 +45,7 @@ void preexit_cleanup(CPUArchState *env, int code)
         __gcov_dump();
 #endif
         if (_pTBLog != NULL) {
-            uint32_t tmpBuf[2] = { 0, 0 };
-            uint32_t tbCompLogbuf[65536] = { 0 };
-            unsigned int compSize;
-            // Compress the buffer...
-            _pTBZStrm->avail_in = sizeof(tmpBuf);
-            _pTBZStrm->next_in = (Bytef *)tmpBuf;
-            do {
-                _pTBZStrm->avail_out = sizeof(tbCompLogbuf);
-                _pTBZStrm->next_out = (Bytef *)tbCompLogbuf;
-                deflate(_pTBZStrm, Z_FINISH);
-                compSize = sizeof(tbCompLogbuf) - _pTBZStrm->avail_out;
-                fwrite(&tbCompLogbuf, 1, compSize, _pTBLog);
-            } while (_pTBZStrm->avail_out == 0);
+            dumpTBData(NULL, 0);
             fclose(_pTBLog);
             deflateEnd(_pTBZStrm);
             free(_pTBZStrm);
