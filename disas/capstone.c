@@ -193,34 +193,45 @@ void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 extern FILE *_pTBLog;
 extern z_stream *_pTBZStrm;
 #define BUFFER_MAX 65536
+
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
 {
-    static uint8_t compLogbuf[BUFFER_MAX];
-    static uint8_t tmpBuf[BUFFER_MAX];
+    static uint8_t *pCompLogbuf = NULL;
+    if (pCompLogbuf == NULL) {
+        pCompLogbuf = (uint8_t *)malloc(BUFFER_MAX * sizeof(uint8_t));
+    }
+    static uint8_t *pTmpBuf = NULL;
+    if (pTmpBuf == NULL) {
+        pTmpBuf = (uint8_t *)malloc(BUFFER_MAX * sizeof(uint8_t));
+    }
     static uint32_t logBufSize = 0;
 
-    if ((pBuffer != 0) && (logBufSize < (logBufSize + bufSize))) {
-        memcpy(&tmpBuf[logBufSize], pBuffer, bufSize);
+    if ((pBuffer != NULL) && ((logBufSize + bufSize) < BUFFER_MAX)) {
+        memcpy(pTmpBuf + logBufSize, pBuffer, bufSize);
         logBufSize += bufSize;
     }
     else {
         if (logBufSize == 0) {
-            memset(&tmpBuf, 0, sizeof(tmpBuf));
+            memset(pTmpBuf, 0, sizeof(uint8_t) * BUFFER_MAX);
             logBufSize = 64;
         }
         unsigned int compSize;
         // Compress the buffer...
         _pTBZStrm->avail_in = logBufSize;
-        _pTBZStrm->next_in = (Bytef *)tmpBuf;
+        _pTBZStrm->next_in = (Bytef *)pTmpBuf;
         do {
-            _pTBZStrm->avail_out = sizeof(compLogbuf);
-            _pTBZStrm->next_out = compLogbuf;
+            _pTBZStrm->avail_out = BUFFER_MAX * sizeof(uint8_t);
+            _pTBZStrm->next_out = pCompLogbuf;
             deflate(_pTBZStrm, (pBuffer == NULL) ? Z_FINISH : Z_SYNC_FLUSH);
-            compSize = sizeof(compLogbuf) - _pTBZStrm->avail_out;
+            compSize = (BUFFER_MAX * sizeof(uint8_t)) - _pTBZStrm->avail_out;
             fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
-            fwrite(&compLogbuf, 1, compSize, _pTBLog);
+            fwrite(pCompLogbuf, 1, compSize, _pTBLog);
         } while (_pTBZStrm->avail_out == 0);
         logBufSize = 0;
+        if (pBuffer != NULL) {
+            memcpy(pTmpBuf + logBufSize, pBuffer, bufSize);
+            logBufSize += bufSize;
+        }
     }
 }
 

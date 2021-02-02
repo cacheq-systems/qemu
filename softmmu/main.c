@@ -56,8 +56,6 @@ uint8_t _nThreadStop = 0;
 
 int main(int argc, char **argv, char **envp)
 {
-    qemu_init(argc, argv, envp);
-
     // VIGGY: Open TB/PC dump log files...
     _pPCLog = fopen("pc-data.bin", "w+b");
     _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
@@ -78,6 +76,8 @@ int main(int argc, char **argv, char **envp)
     fwrite(&tmpVal, 4, 1, _pPCLog);
     fwrite(&tmpVal, 4, 1, _pTBLog);
 
+    qemu_init(argc, argv, envp);
+ 
     qemu_main_loop();
 
     if (_pPCLog != NULL) {
