@@ -9,7 +9,8 @@
 #include <vector>
 
 #include "CLI11/CLI11x.hpp"
-
+#include "itoa.h"
+#include "PPC_Lookup.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -79,11 +80,12 @@ uint32_t timing_percent_table[ timing_percent_table_size ] =
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string
-dectohex8( uint32_t value )
+dectohex( uint32_t value,
+          uint32_t width )
     {
     std::ostringstream ret;
     
-    ret << "0x" << std::hex << std::setfill( '0' ) << std::setw( 8 ) << std::uppercase << value;
+    ret << std::hex << std::setfill( '0' ) << std::setw( width ) << std::uppercase << value;
             
     return ret.str();
     }
@@ -378,11 +380,19 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                                   PC_data_set &       PC_data )
     {
     std::ofstream output_bin_stream = open_output_bin_stream( timing_bin_file_name );
+    uint32_t      last_pc_instruction_address = PC_data.elements[ 0 ].start_address;
     
     // Loop through all of the PC execution records.
     for( auto pc_element : PC_data.elements )
         {
         uint32_t pc_instruction_address = pc_element.start_address;
+        
+        // Only output a disassembly listing if requested.
+        if( verbose_option )
+            {
+            if( last_pc_instruction_address != pc_instruction_address )
+                std::cout << std::endl;
+            }
         
         // Get the TB for the next PC execution record.
         TB_element tb_element = TB_data[ pc_instruction_address ];
@@ -391,22 +401,50 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
         for( auto ppc_instruction : tb_element.instructions )
             {
             // Get the timing value for the next instruction.
-            uint8_t pc_instruction_timing = lookup_timing_value( ppc_instruction );
+            instruction_element * instruction_data = lookup_instruction_data( ppc_instruction );
             
-            // Show the instruction at each execution address and its timing value.
-            std::cout << dectohex8( pc_instruction_address )
-                      << ":    "
-                      << dectohex8( ppc_instruction )
-                      << "   "
-                      << std::to_string( pc_instruction_timing )
-                      << std::endl;
-            
-            // Output the timing value to the Timing Value bin file.
-            output_bin_stream.write( (char *)&pc_instruction_timing, 1 );
+            // Gaurd for unknown instructions.
+            if( instruction_data == (instruction_element *)NULL )
+                {
+                std::cerr << "WARNING: Unknown PPC instruction "
+                          << dectohex( ( ppc_instruction ), 8 )
+                          << " encountered at address "
+                          << dectohex( ( pc_instruction_address ), 8 )
+                          << "."
+                          << std::endl;
+                }
+            else
+                {
+                // Only output a disassembly listing if requested.
+                if( verbose_option )
+                    {
+                    std::string instruction_str = get_instruction_text( instruction_data, pc_instruction_address, ppc_instruction );
+                    instruction_str.resize( 25, ' ' ); 
+                    
+                    // Show the instruction at each execution address and its timing value.
+                    std::cout << "   "
+                              << dectohex( ( pc_instruction_address ), 8 )
+                              << ":   "
+                              << dectohex( ( ( ppc_instruction >> 24 ) & 0xFF ), 2 ) << " "
+                              << dectohex( ( ( ppc_instruction >> 16 ) & 0xFF ), 2 ) << " "
+                              << dectohex( ( ( ppc_instruction >> 8  ) & 0xFF ), 2 ) << " "
+                              << dectohex( ( ( ppc_instruction >> 0  ) & 0xFF ), 2 )
+                              << "     "
+                              << instruction_str
+                              << "   "
+                              << std::to_string( instruction_data->latency_cycles )
+                              << std::endl;
+                    
+                    // Output the timing value to the Timing Value bin file.
+                    output_bin_stream.write( (char *)&instruction_data->latency_cycles, 1 );
+                    }
+                }
             
             // Go to the next instruction.
             pc_instruction_address += sizeof( uint32_t );
             }
+        
+        last_pc_instruction_address = pc_instruction_address;
         }
     
     output_bin_stream.close();
@@ -508,27 +546,4 @@ main( int    argc,
                                       PC_data );
     
     return 0;
-
-// Test code.
-#if 0
-    for( auto pc_element : PC_data.elements )
-        {
-        std::cout << "start_address = " << dectohex8( pc_element.start_address ) << ", "
-                  << "end_address = " << dectohex8( pc_element.end_address ) << ", "
-                  << "instruction_count = " << dectohex8( pc_element.instruction_count ) << "."
-                  << std::endl;
-        
-        TB_element tb_element = TB_data[ pc_element.start_address ];
-        
-        std::cout << "start_address = " << dectohex8( tb_element.start_address ) << ", "
-                  << "end_address = " << dectohex8( tb_element.end_address ) << ", "
-                  << "instruction_count = " << dectohex8( tb_element.instruction_count ) << "."
-                  << std::endl;
-        
-        std::cout << std::endl;
-        
-//        if( TB_data.find( pc_element.start_address ) == TB_data.end() )
-//            std::cout << "Not found!" << std::endl;
-        }
-#endif
     }
