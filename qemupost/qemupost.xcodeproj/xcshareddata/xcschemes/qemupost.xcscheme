@@ -58,7 +58,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin"
@@ -66,7 +66,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -v"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

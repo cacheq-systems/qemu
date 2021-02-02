@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9E4D144625A512720018A440 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9E4D144525A512720018A440 /* main.cpp */; };
 		9E4D145325C96CC50018A440 /* itoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 9E4D145225C96CC50018A440 /* itoa.c */; };
+		9E4D145525C9707E0018A440 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9E4D145425C9707E0018A440 /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,9 +25,9 @@
 
 /* Begin PBXFileReference section */
 		9E4D144225A512720018A440 /* qemupost */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = qemupost; sourceTree = BUILT_PRODUCTS_DIR; };
-		9E4D144525A512720018A440 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		9E4D145125C96CC50018A440 /* itoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = itoa.h; sourceTree = "<group>"; };
 		9E4D145225C96CC50018A440 /* itoa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = itoa.c; sourceTree = "<group>"; };
+		9E4D145425C9707E0018A440 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,7 +60,7 @@
 		9E4D144425A512720018A440 /* qemupost */ = {
 			isa = PBXGroup;
 			children = (
-				9E4D144525A512720018A440 /* main.cpp */,
+				9E4D145425C9707E0018A440 /* main.cpp */,
 				9E4D145225C96CC50018A440 /* itoa.c */,
 				9E4D145125C96CC50018A440 /* itoa.h */,
 			);
@@ -124,8 +124,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E4D145525C9707E0018A440 /* main.cpp in Sources */,
 				9E4D145325C96CC50018A440 /* itoa.c in Sources */,
-				9E4D144625A512720018A440 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

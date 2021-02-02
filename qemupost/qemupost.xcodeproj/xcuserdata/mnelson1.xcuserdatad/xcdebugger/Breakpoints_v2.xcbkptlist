@@ -7,15 +7,15 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "D88A0BA5-CA70-4CA9-8D5F-47AECA96F1C6"
+            uuid = "6A9066CF-CDEB-4D00-993B-F86A8ECE2F01"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "qemupost/main.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "496"
-            endingLineNumber = "496"
+            startingLineNumber = "535"
+            endingLineNumber = "535"
             landmarkName = "main(argc, argv)"
             landmarkType = "9">
          </BreakpointContent>
