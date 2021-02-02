@@ -206,7 +206,7 @@ void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
     }
     else {
         if (logBufSize == 0) {
-            memset(&tmpBuf, 0, sizeof(uint8_t) * BUFFER_MAX);
+            memset(&tmpBuf, 0, sizeof(tmpBuf));
             logBufSize = 64;
         }
         unsigned int compSize;
@@ -214,16 +214,16 @@ void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
         _pTBZStrm->avail_in = logBufSize;
         _pTBZStrm->next_in = (Bytef *)&tmpBuf;
         do {
-            _pTBZStrm->avail_out = BUFFER_MAX * sizeof(uint8_t);
+            _pTBZStrm->avail_out = sizeof(compLogbuf);
             _pTBZStrm->next_out = compLogbuf;
             deflate(_pTBZStrm, (pBuffer == NULL) ? Z_FINISH : Z_SYNC_FLUSH);
-            compSize = (BUFFER_MAX * sizeof(uint8_t)) - _pTBZStrm->avail_out;
+            compSize = sizeof(compLogbuf) - _pTBZStrm->avail_out;
             fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
             fwrite(&compLogbuf, 1, compSize, _pTBLog);
         } while (_pTBZStrm->avail_out == 0);
         logBufSize = 0;
         if (pBuffer != NULL) {
-            memcpy(&compLogbuf, pBuffer, bufSize);
+            memcpy(&tmpBuf, pBuffer, bufSize);
             logBufSize += bufSize;
         }
     }
