@@ -28,6 +28,7 @@
 		9E4D145125C96CC50018A440 /* itoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = itoa.h; sourceTree = "<group>"; };
 		9E4D145225C96CC50018A440 /* itoa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = itoa.c; sourceTree = "<group>"; };
 		9E4D145425C9707E0018A440 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		9E4D145625C9729B0018A440 /* PPC_Lookup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PPC_Lookup.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +62,7 @@
 			isa = PBXGroup;
 			children = (
 				9E4D145425C9707E0018A440 /* main.cpp */,
+				9E4D145625C9729B0018A440 /* PPC_Lookup.h */,
 				9E4D145225C96CC50018A440 /* itoa.c */,
 				9E4D145125C96CC50018A440 /* itoa.h */,
 			);
