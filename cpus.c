@@ -1027,8 +1027,11 @@ static int do_vm_stop(RunState state, bool send_stop)
 /* Special vm_stop() variant for terminating the process.  Historically clients
  * did not expect a QMP STOP event and so we need to retain compatibility.
  */
+// VIGGY:
+void cleanUpLogs(void);
 int vm_shutdown(void)
 {
+    cleanUpLogs();
     return do_vm_stop(RUN_STATE_SHUTDOWN, false);
 }
 
@@ -2023,6 +2026,7 @@ void cpu_stop_current(void)
 
 // VIGGY:
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
@@ -2033,8 +2037,8 @@ extern uint8_t _nThreadStop;
 int vm_stop(RunState state)
 {
     if (_pPCLog != NULL) {
-        //dumpValCompressed(0, 0);
-        //dumpValCompressed(0, 1);
+        dumpValCompressed(0, 0);
+        dumpValCompressed(0, 1);
 
         _nThreadStop = 1;
         pthread_join(_pDumpThreadID, NULL);
@@ -2042,11 +2046,14 @@ int vm_stop(RunState state)
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);
         free(_pPCZStrm);
+        _pPCLog = NULL;
     }
     if (_pTBLog != NULL) {
+        dumpTBData(NULL, 0);
         fclose(_pTBLog);
         deflateEnd(_pTBZStrm);
         free(_pTBZStrm);
+        _pTBLog = NULL;
     }
 
     if (qemu_in_vcpu_thread()) {

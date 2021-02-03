@@ -669,6 +669,12 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 
 // VIGGY:
 void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
+void openLogs(void);
+void cleanUpLogs(void);
+
+extern FILE *_pTBLog;
+extern z_stream *_pTBZStrm;
 
 static GAsyncQueue *_pIsaQueue;
 FILE *_pPCLog = NULL;
@@ -711,6 +717,59 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
         }
     }
 }
+
+void cleanUpLogs(void)
+{
+    if (_pPCLog != NULL) {
+        dumpValCompressed(0, 0);
+        dumpValCompressed(0, 1);
+
+        _nThreadStop = 1;
+        //pthread_join(_pDumpThreadID, NULL);
+
+        fclose(_pPCLog);
+        deflateEnd(_pPCZStrm);
+        free(_pPCZStrm);
+        _pPCLog = NULL;
+    }
+    if (_pTBLog != NULL) {
+        dumpTBData(NULL, 0);
+        fclose(_pTBLog);
+        deflateEnd(_pTBZStrm);
+        free(_pTBZStrm);
+        _pTBLog = NULL;
+    }
+}
+
+void openLogs(void)
+{
+    //atexit(cleanUpLogs);
+
+    // VIGGY: Open TB/PC dump log files...
+    _pPCLog = fopen("pc-data.bin", "w+b");
+    _pTBLog = fopen("tb-data.bin", "w+b");
+    // Write a header...
+    uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
+    fwrite(&tmpVal, 4, 1, _pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
+    tmpVal = __builtin_bswap32(1000);
+    fwrite(&tmpVal, 4, 1, _pPCLog);
+    fwrite(&tmpVal, 4, 1, _pTBLog);
+
+    _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pPCZStrm->zalloc = Z_NULL;
+    _pPCZStrm->zfree = Z_NULL;
+    _pPCZStrm->opaque = Z_NULL;
+    deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
+
+    _pTBZStrm = (z_stream *)malloc(sizeof(z_stream));
+    _pTBZStrm->zalloc = Z_NULL;
+    _pTBZStrm->zfree = Z_NULL;
+    _pTBZStrm->opaque = Z_NULL;
+    deflateInit(_pTBZStrm, Z_DEFAULT_COMPRESSION);
+
+}
+
 static void *log_pc(void *pArgs)
 {
     static uint32_t lastPC = 0;
@@ -720,32 +779,11 @@ static void *log_pc(void *pArgs)
 
     //static uint64_t numWritten = 0;
     if (_pPCLog == NULL) {
-        // VIGGY: Open TB/PC dump log files...
-        _pPCLog = fopen("pc-data.bin", "w+b");
-        _pTBLog = fopen("tb-data.bin", "w+b");
-        // Write a header...
-        uint32_t tmpVal = __builtin_bswap32(0x5a5aa5a5);
-        fwrite(&tmpVal, 4, 1, _pPCLog);
-        fwrite(&tmpVal, 4, 1, _pTBLog);
-        tmpVal = __builtin_bswap32(1000);
-        fwrite(&tmpVal, 4, 1, _pPCLog);
-        fwrite(&tmpVal, 4, 1, _pTBLog);
-
-        _pPCZStrm = (z_stream *)malloc(sizeof(z_stream));
-        _pPCZStrm->zalloc = Z_NULL;
-        _pPCZStrm->zfree = Z_NULL;
-        _pPCZStrm->opaque = Z_NULL;
-        deflateInit(_pPCZStrm, Z_DEFAULT_COMPRESSION);
-
-        _pTBZStrm = (z_stream *)malloc(sizeof(z_stream));
-        _pTBZStrm->zalloc = Z_NULL;
-        _pTBZStrm->zfree = Z_NULL;
-        _pTBZStrm->opaque = Z_NULL;
-        deflateInit(_pTBZStrm, Z_DEFAULT_COMPRESSION);
+        openLogs();
     }
 
     //if (numWritten < 3000000) {
-    for (;;) {
+    //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
             if (lastPC == 0) {
@@ -764,7 +802,7 @@ static void *log_pc(void *pArgs)
                 numInsns = pData->_insns_size;
             }
         }
-    }
+    //}
     return NULL;
 }
 /* main execution loop */
@@ -817,7 +855,8 @@ int cpu_exec(CPUState *cpu)
     if (_pDumpThreadID == 0) {
         _nThreadStop = 0;
         _pIsaQueue = g_async_queue_new();
-        pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
+        _pDumpThreadID = 1;
+        //pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
     }
 
     /* if an exception is pending, we execute it here */
@@ -845,7 +884,7 @@ int cpu_exec(CPUState *cpu)
 
             // VIGGY: Log ISA here...
             g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
-            //log_pc(NULL);
+            log_pc(NULL);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */

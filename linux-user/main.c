@@ -4525,6 +4525,9 @@ static int parse_args(int argc, char **argv)
     return optind;
 }
 
+void openLogs(void);
+void cleanUpLogs(void);
+
 int main(int argc, char **argv, char **envp)
 {
     struct target_pt_regs regs1, *regs = &regs1;
@@ -4540,6 +4543,8 @@ int main(int argc, char **argv, char **envp)
     int i;
     int ret;
     int execfd;
+
+    openLogs();
         
     module_call_init(MODULE_INIT_TRACE);
     qemu_init_cpu_list();

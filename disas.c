@@ -307,30 +307,46 @@ static void cap_annot8_insn(TargetIsaData *targIsa, disassemble_info *info,
 }
 
 // VIGGY: Disassemble at PC, annotate data in TB...
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 extern FILE *_pTBLog;
 extern z_stream *_pTBZStrm;
 #define BUFFER_MAX 65536
-static void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
+void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
 {
     static uint8_t compLogbuf[BUFFER_MAX];
-    //if (bufSize < BUFFER_MAX) {
-        // Pad the buffer...
-    //    memset(&pBuffer[bufSize], 0, BUFFER_MAX - bufSize);
-    //}
-    unsigned int compSize;
-    // Compress the buffer...
-    _pTBZStrm->avail_in = bufSize;
-    _pTBZStrm->next_in = (Bytef *)pBuffer;
-    do {
-        _pTBZStrm->avail_out = sizeof(compLogbuf);
-        _pTBZStrm->next_out = compLogbuf;
-        deflate(_pTBZStrm, Z_SYNC_FLUSH);
-        compSize = sizeof(compLogbuf) - _pTBZStrm->avail_out;
-        fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
-        fwrite(&compLogbuf, 1, compSize, _pTBLog);
-    } while (_pTBZStrm->avail_out == 0);
+    static uint8_t tmpBuf[BUFFER_MAX];
+    static uint32_t logBufSize = 0;
+
+    if ((pBuffer != NULL) && ((logBufSize + bufSize) < BUFFER_MAX)) {
+        memcpy(&tmpBuf[logBufSize], pBuffer, bufSize);
+        logBufSize += bufSize;
+    }
+    else {
+        if (logBufSize == 0) {
+            memset(&tmpBuf, 0, sizeof(uint8_t) * BUFFER_MAX);
+            logBufSize = 64;
+        }
+        unsigned int compSize;
+        // Compress the buffer...
+        _pTBZStrm->avail_in = logBufSize;
+        _pTBZStrm->next_in = (Bytef *)tmpBuf;
+        do {
+            _pTBZStrm->avail_out = sizeof(compLogbuf);
+            _pTBZStrm->next_out = compLogbuf;
+            deflate(_pTBZStrm, (pBuffer == NULL) ? Z_FINISH : Z_SYNC_FLUSH);
+            compSize = sizeof(compLogbuf) - _pTBZStrm->avail_out;
+            fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
+            fwrite(&compLogbuf, 1, compSize, _pTBLog);
+        } while (_pTBZStrm->avail_out == 0);
+        logBufSize = 0;
+        if (pBuffer != NULL) {
+            memcpy(&tmpBuf, pBuffer, bufSize);
+            logBufSize += bufSize;
+        }
+    }
 }
 
+void openLogs(void);
 static bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     uint64_t pc, size_t size)
 {
@@ -384,6 +400,9 @@ static bool cap_disas_annot8(TargetIsaData *targIsa, disassemble_info *info,
     }
 
     // Open the TB log, and log it.
+    if (_pTBLog == NULL) {
+        openLogs();
+    }
     if (_pTBLog != NULL) {
         //fwrite(&targIsa->_pc_start_addr, 4, 1, _pTBLog);
         //fwrite(&targIsa->_insns_size, 4, 1, _pTBLog);

@@ -719,6 +719,9 @@ void init_task_state(TaskState *ts)
     ts->sigqueue_table[i].next = NULL;
 }
 
+// VIGGY:
+void openLogs(void);
+
 int main(int argc, char **argv)
 {
     const char *filename;
@@ -741,6 +744,8 @@ int main(int argc, char **argv)
 
     if (argc <= 1)
         usage();
+
+    openLogs();
 
     module_call_init(MODULE_INIT_TRACE);
     qemu_init_cpu_list();
