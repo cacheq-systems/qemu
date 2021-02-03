@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <stdlib.h>
+#include <time.h>
 
 #include "CLI11/CLI11x.hpp"
 #include "itoa.h"
@@ -48,6 +50,16 @@ struct PC_data_set
     };
 typedef struct PC_data_set PC_data_set;
 
+// TB image.
+struct TB_image_set
+    {
+    uint32_t   lowest_start_address;
+    uint32_t   highest_end_address;
+    uint32_t   instruction_count;
+    uint32_t * instructions;
+    };
+typedef struct TB_image_set TB_image_set;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -57,6 +69,7 @@ typedef struct PC_data_set PC_data_set;
 
 // Global command line options.
 bool debug_option;
+bool time_option;
 bool verbose_option;
 
 // Approximate percentage a timing value appears in PPC instructions.
@@ -261,7 +274,8 @@ read_next_TB( std::ifstream & TB_stream )
 
 void
 read_TB_data( const std::string & TB_bin_file_name,
-              TB_data_set &       TB_data )
+              TB_data_set &       TB_data,
+              TB_image_set &      TB_image )
     {
     TB_element    next_tb_element;
     std::ifstream inputTBstream = open_bin_stream( TB_bin_file_name );
@@ -272,6 +286,13 @@ read_TB_data( const std::string & TB_bin_file_name,
     // While there is still TB data to tbe read.
     while( inputTBstream )
         {
+        // Remember the lowest and highest address.
+        if( next_tb_element.start_address < TB_image.lowest_start_address )
+            TB_image.lowest_start_address = next_tb_element.start_address;
+        
+        if( next_tb_element.end_address > TB_image.highest_end_address )
+            TB_image.highest_end_address = next_tb_element.end_address;
+        
         // Add the current TB to the full TB data set.
         TB_data[ next_tb_element.start_address ] = next_tb_element;
         
@@ -280,6 +301,47 @@ read_TB_data( const std::string & TB_bin_file_name,
         }
     
     inputTBstream.close();
+    }
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// FUNCTION: build_TB_image
+//
+///////////////////////////////////////////////////////////////////////////////
+
+void
+build_TB_image( TB_data_set &  TB_data,
+                TB_image_set & TB_image )
+    {
+    // Loop through all of the TB records.
+    for( auto tb_element : TB_data  )
+        {
+        TB_element element       = tb_element.second;
+        uint32_t   start_address = element.start_address;
+        
+        // Loop through the instructions in the TB.
+        for( auto ppc_instruction : element.instructions )
+            {
+            *(uint32_t *)( (uint8_t *)TB_image.instructions + ( start_address -
+                                                                TB_image.lowest_start_address ) ) = ppc_instruction;
+            
+            start_address += sizeof( uint32_t );
+            }
+        }
+    }
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// FUNCTION: free_TB_image
+//
+///////////////////////////////////////////////////////////////////////////////
+
+void
+free_TB_image( TB_image_set & TB_image )
+    {
+    free( TB_image.instructions );
     }
 
 
@@ -376,16 +438,20 @@ lookup_timing_value( uint32_t ppc_instruction )
 
 void
 output_instruction_timing_values( const std::string & timing_bin_file_name,
-                                  TB_data_set &       TB_data,
+                                  TB_image_set &      TB_image,
                                   PC_data_set &       PC_data )
     {
     std::ofstream output_bin_stream = open_output_bin_stream( timing_bin_file_name );
     uint32_t      last_pc_instruction_address = PC_data.elements[ 0 ].start_address;
+    uint32_t      ppc_instruction;
+    uint32_t      pc_instruction_address;
+    uint32_t      instruction_access_address;
     
     // Loop through all of the PC execution records.
     for( auto pc_element : PC_data.elements )
         {
-        uint32_t pc_instruction_address = pc_element.start_address;
+        pc_instruction_address     = pc_element.start_address;
+        instruction_access_address = pc_instruction_address - TB_image.lowest_start_address;
         
         // Only output a disassembly listing if requested.
         if( verbose_option )
@@ -394,24 +460,30 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                 std::cout << std::endl;
             }
         
-        // Get the TB for the next PC execution record.
-        TB_element tb_element = TB_data[ pc_instruction_address ];
-        
-        // Loop through the instruction in the TB.
-        for( auto ppc_instruction : tb_element.instructions )
+        // Loop through the instructions in the TB image.
+        for( auto instruction_count = pc_element.instruction_count; instruction_count > 0; --instruction_count )
             {
+            // Get the next PowerPC instruction.
+            ppc_instruction = *(uint32_t *)( (uint8_t *)TB_image.instructions + instruction_access_address );
+            
             // Get the timing value for the next instruction.
             instruction_element * instruction_data = lookup_instruction_data( ppc_instruction );
             
-            // Gaurd for unknown instructions.
+            // Keep track of the number of instructions executed.
+            ++TB_image.instruction_count;
+            
+            // Guard for unknown instructions.
             if( instruction_data == (instruction_element *)NULL )
                 {
-                std::cerr << "WARNING: Unknown PPC instruction "
-                          << dectohex( ( ppc_instruction ), 8 )
-                          << " encountered at address "
-                          << dectohex( ( pc_instruction_address ), 8 )
-                          << "."
-                          << std::endl;
+                if( verbose_option )
+                    {
+                    std::cout << "WARNING: Unknown PPC instruction "
+                              << dectohex( ( ppc_instruction ), 8 )
+                              << " encountered at address "
+                              << dectohex( ( pc_instruction_address ), 8 )
+                              << "."
+                              << std::endl;
+                    }
                 }
             else
                 {
@@ -434,14 +506,16 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                               << "   "
                               << std::to_string( instruction_data->latency_cycles )
                               << std::endl;
-                    
-                    // Output the timing value to the Timing Value bin file.
-                    output_bin_stream.write( (char *)&instruction_data->latency_cycles, 1 );
                     }
+                
+                // Output the timing value to the Timing Value bin file.
+                if( !time_option )
+                    output_bin_stream.write( (char *)&instruction_data->latency_cycles, 1 );
                 }
             
             // Go to the next instruction.
-            pc_instruction_address += sizeof( uint32_t );
+            pc_instruction_address     += sizeof( uint32_t );
+            instruction_access_address += sizeof( uint32_t );
             }
         
         last_pc_instruction_address = pc_instruction_address;
@@ -499,7 +573,11 @@ class CLIx_Parse
         // Hidden debug output flag option.
         auto option_debug = app_options.add_flag( "-d", debug_option );
              option_debug->group("");
-            
+        
+        // Hidden time data output flag option.
+        auto option_time = app_options.add_flag( "-t", time_option );
+             option_time->group("");
+        
         // Hidden verbose output flag option.
         auto option_verbose = app_options.add_flag( "-v", verbose_option );
              option_verbose->group("");
@@ -529,21 +607,60 @@ int
 main( int    argc,
       char * argv[] )
     {
-    TB_data_set TB_data;
-    PC_data_set PC_data;
+    TB_data_set  TB_data;
+    PC_data_set  PC_data;
+    TB_image_set TB_image = { 0xFFFFFFFF, 0, 0 };
     
     CLIx_Parse cmd_options( argc,
                             argv );
     
     read_TB_data( cmd_options.code_file_name,
-                  TB_data );
+                  TB_data,
+                  TB_image );
+    
+    TB_image.instructions = (uint32_t *)calloc( (size_t)( ( TB_image.highest_end_address / 4 ) + 1 ),
+                                                sizeof( uint32_t ) );
+    
+    build_TB_image( TB_data,
+                    TB_image );
     
     read_PC_data( cmd_options.exec_file_name,
                   PC_data );
     
+    clock_t start_time = clock();
+    
     output_instruction_timing_values( cmd_options.output_file_name,
-                                      TB_data,
+                                      TB_image,
                                       PC_data );
+    
+    clock_t end_time = clock();
+    
+if( time_option )
+    {
+    double clock_difference        = end_time - start_time;
+    double total_seconds           = clock_difference / CLOCKS_PER_SEC;
+    double secs_per_instruction    = total_seconds / TB_image.instruction_count;
+    long   instructions_per_second = 1 / secs_per_instruction;
+    
+    std::cout << "Clocks per second       = " << CLOCKS_PER_SEC
+              << std::endl
+              << "Total instructions      = " << TB_image.instruction_count
+              << std::endl
+              << "Clock start             = " << start_time
+              << std::endl
+              << "Clock end               = " << end_time
+              << std::endl
+              << "Clock difference        = " << clock_difference
+              << std::endl
+              << "Total seconds           = " << total_seconds
+              << std::endl
+              << "Seconds per instruction = " << std::fixed << std::setprecision( 15 ) << secs_per_instruction
+              << std::endl
+              << "Instructions per second = " << instructions_per_second
+              << std::endl;
+    }
+    
+    free_TB_image( TB_image );
     
     return 0;
     }

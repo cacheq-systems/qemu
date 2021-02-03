@@ -57,12 +57,12 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v"
-            isEnabled = "YES">
+            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v -t"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin"
-            isEnabled = "NO">
+            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -t"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -v"
