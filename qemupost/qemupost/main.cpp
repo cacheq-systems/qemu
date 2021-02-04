@@ -503,7 +503,7 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                         std::cout << std::endl;
                     
                     printf( "%s\n%s\n",
-                            "   Address     opcode          instruction                 cycles  instruction time       accumulated time",
+                            "   Address     opcode          instruction                 cycles  instruction time        accumulated time",
                              "----------------------------------------------------------------------------------------------------------" );
                             
 //                    std::cout << "   Address     opcode          instruction                 cycles  instruction time    accumulated time"
@@ -580,9 +580,9 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                         accumulative_time += instruction_time;
                         
                         std::cout << "       "
-                                  << std::fixed << std::setprecision( 14 ) << instruction_time
+                                  << std::fixed << std::setprecision( 15 ) << instruction_time
                                   << "       "
-                                  << std::fixed << std::setprecision( 14 ) << accumulative_time;
+                                  << std::fixed << std::setprecision( 15 ) << accumulative_time;
                         }
                     
                     std::cout << std::endl;
