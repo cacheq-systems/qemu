@@ -7856,26 +7856,7 @@ static int host_to_target_cpu_mask(const unsigned long *host_mask,
 }
 
 // VIGGY:
-void dumpValCompressed(uint32_t val, uint8_t bForce);
-
-extern FILE *_pPCLog;
-extern z_stream *_pPCZStrm;
-
-static void closePCLog(void)
-{
-    if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
-
-        //_nThreadStop = 1;
-        //pthread_join(_pDumpThreadID, NULL);
-
-        fclose(_pPCLog);
-        deflateEnd(_pPCZStrm);
-        free(_pPCZStrm);
-        _pPCLog = NULL;
-    }
-}
+void cleanUpLogs(void);
 
 /* do_syscall() should always have a single exit point at the end so
    that actions, such as logging of syscall results, can be performed.
@@ -7953,7 +7934,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         _mcleanup();
 #endif
         // VIGGY:
-        closePCLog();
+        cleanUpLogs();
 
         gdb_exit(cpu_env, arg1);
         _exit(arg1);
@@ -10075,7 +10056,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         _mcleanup();
 #endif
         // VIGGY:
-        closePCLog();
+        cleanUpLogs();
 
         gdb_exit(cpu_env, arg1);
         ret = get_errno(exit_group(arg1));
