@@ -68,9 +68,9 @@ typedef struct TB_image_set TB_image_set;
 ///////////////////////////////////////////////////////////////////////////////
 
 // Global command line options.
-bool debug_option;
-bool time_option;
-bool verbose_option;
+bool   debug_option{ false };
+double time_option{ 0.0 };
+bool   verbose_option{ false };
 
 // Approximate percentage a timing value appears in PPC instructions.
 const uint32_t timing_percent_table_size = 40;
@@ -92,7 +92,7 @@ uint32_t timing_percent_table[ timing_percent_table_size ] =
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-std::string
+inline char *
 dectohex( uint32_t value,
           uint32_t width )
     {
@@ -100,10 +100,36 @@ dectohex( uint32_t value,
     //ret << std::hex << std::setfill( '0' ) << std::setw( width ) << std::uppercase << value;
     //return ret.str();
     static char buff[1024];
-    sprintf(buff, "%0*x", width, value);
+    sprintf(buff, "%0*X", width, value);
     return buff;
     }
 
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// FUNCTION: Fill_to_margin
+//
+///////////////////////////////////////////////////////////////////////////////
+
+inline char *
+Fill_to_margin( char *   string,
+                uint32_t margin )
+    {
+    uint32_t string_len = (uint32_t)strlen( string );
+    char *   string_ptr = string + string_len;
+    
+    if( string_len < margin )
+        {
+        for( auto count = margin - string_len - 1; count > 0; --count )
+            {
+            *string_ptr = ' ';
+            
+            ++string_ptr;
+            }
+        *string_ptr = '\0';
+        }
+    return string;
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -447,6 +473,9 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
     uint32_t      ppc_instruction;
     uint32_t      pc_instruction_address;
     uint32_t      instruction_access_address;
+    double        time_per_clock = 1 / ( time_option * 1000000000 );
+    double        instruction_time;
+    double        accumulative_time = 0.0;
     
     // Loop through all of the PC execution records.
     for( auto pc_element : PC_data.elements )
@@ -464,6 +493,26 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
         // Loop through the instructions in the TB image.
         for( auto instruction_count = pc_element.instruction_count; instruction_count > 0; --instruction_count )
             {
+            // Only output a disassembly listing if requested.
+            if( verbose_option )
+                {
+                // Output a label header every 100 instructions.
+                if( ( TB_image.instruction_count % 50 ) == 0 )
+                    {
+                    if( TB_image.instruction_count > 0 )
+                        std::cout << std::endl;
+                    
+                    printf( "%s\n%s\n",
+                            "   Address     opcode          instruction                 cycles  instruction time    accumulated time",
+                             "----------------------------------------------------------------------------------------------------------" );
+                            
+//                    std::cout << "   Address     opcode          instruction                 cycles  instruction time    accumulated time"
+//                              << std::endl
+//                              << "----------------------------------------------------------------------------------------------------------"
+//                              << std::endl;
+                    }
+                }
+            
             // Get the next PowerPC instruction.
             ppc_instruction = *(uint32_t *)( (uint8_t *)TB_image.instructions + instruction_access_address );
             
@@ -491,6 +540,7 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                 // Only output a disassembly listing if requested.
                 if( verbose_option )
                     {
+#if 1
                     std::string instruction_str = get_instruction_text( instruction_data, pc_instruction_address, ppc_instruction );
                     instruction_str.resize( 25, ' ' ); 
                     
@@ -505,13 +555,41 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                               << "     "
                               << instruction_str
                               << "   "
-                              << std::to_string( instruction_data->latency_cycles )
-                              << std::endl;
+                              << std::to_string( instruction_data->latency_cycles );
+#else
+                    char * instruction_str = get_instruction_text( instruction_data, pc_instruction_address, ppc_instruction );
+                    
+                    Fill_to_margin( instruction_str,
+                                    25 );
+                    
+                    // Show the instruction at each execution address and its timing value.
+                    printf( "   %08X:   %02X %02X %02X %02X     %s    %d" ,
+                            ( pc_instruction_address ),
+                            ( ( ppc_instruction >> 24 ) & 0xFF ),
+                            ( ( ppc_instruction >> 16 ) & 0xFF ),
+                            ( ( ppc_instruction >> 8  ) & 0xFF ),
+                            ( ( ppc_instruction >> 0  ) & 0xFF ),
+                            instruction_str,
+                            instruction_data->latency_cycles );
+#endif
+
+                    if( time_option )
+                        {
+                        
+                        instruction_time   = instruction_data->latency_cycles * time_per_clock;
+                        accumulative_time += instruction_time;
+                        
+                        std::cout << "       "
+                                  << std::fixed << std::setprecision( 11 ) << instruction_time
+                                  << "       "
+                                  << std::fixed << std::setprecision( 11 ) << accumulative_time;
+                        }
+                    
+                    std::cout << std::endl;
                     }
                 
                 // Output the timing value to the Timing Value bin file.
-                if( !time_option )
-                    output_bin_stream.write( (char *)&instruction_data->latency_cycles, 1 );
+                output_bin_stream.write( (char *)&instruction_data->latency_cycles, 1 );
                 }
             
             // Go to the next instruction.
@@ -573,15 +651,16 @@ class CLIx_Parse
         
         // Hidden debug output flag option.
         auto option_debug = app_options.add_flag( "-d", debug_option );
-             option_debug->group("");
+             option_debug->group("Hidden");
         
         // Hidden time data output flag option.
-        auto option_time = app_options.add_flag( "-t", time_option );
-             option_time->group("");
+            auto option_time = app_options.add_option( "-t", time_option );
+                 option_time->type_name( "<floating point Ghz value>" );
+                 option_time->check( CLI::PositiveNumber );
         
         // Hidden verbose output flag option.
         auto option_verbose = app_options.add_flag( "-v", verbose_option );
-             option_verbose->group("");
+             option_verbose->group("Hidden");
         
         try
             {
@@ -590,7 +669,8 @@ class CLIx_Parse
             }
         catch( const CLI::ParseError &e )
             {
-            std::cerr << "\nERROR -- qemupost - Command line option parse error.\n";
+            if( argc > 2 )
+                std::cerr << "\nERROR -- qemupost - Command line option parse error.\n";
             
             exit( app_options.exit( e ) );
             }
@@ -636,23 +716,24 @@ main( int    argc,
     
     clock_t end_time = clock();
     
-if( time_option )
+if( time_option && !verbose_option )
     {
     double clock_difference        = end_time - start_time;
     double total_seconds           = clock_difference / CLOCKS_PER_SEC;
     double secs_per_instruction    = total_seconds / TB_image.instruction_count;
     long   instructions_per_second = 1 / secs_per_instruction;
     
-    std::cout << "Clocks per second       = " << CLOCKS_PER_SEC
+    std::cout << "Internal instruction lookup engine statistics."
+              << std::endl
               << std::endl
               << "Total instructions      = " << TB_image.instruction_count
               << std::endl
-              << "Clock start             = " << start_time
-              << std::endl
-              << "Clock end               = " << end_time
-              << std::endl
-              << "Clock difference        = " << clock_difference
-              << std::endl
+//              << "Clock start             = " << start_time
+//              << std::endl
+//              << "Clock end               = " << end_time
+//              << std::endl
+//              << "Clock difference        = " << clock_difference
+//              << std::endl
               << "Total seconds           = " << total_seconds
               << std::endl
               << "Seconds per instruction = " << std::fixed << std::setprecision( 15 ) << secs_per_instruction

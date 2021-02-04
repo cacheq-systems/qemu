@@ -57,15 +57,27 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v -t"
+            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -t"
+            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -t 1.8"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--codefile hello-tb-data.bin --execfile hello-pc-data.bin --output hello-tm-data.bin -v -t 1.8"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -v"
+            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -t"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--codefile tb-data.bin --execfile pc-data.bin --output tm-data.bin -v -t 1.8"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
