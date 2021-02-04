@@ -580,9 +580,9 @@ output_instruction_timing_values( const std::string & timing_bin_file_name,
                         accumulative_time += instruction_time;
                         
                         std::cout << "       "
-                                  << std::fixed << std::setprecision( 11 ) << instruction_time
+                                  << std::fixed << std::setprecision( 14 ) << instruction_time
                                   << "       "
-                                  << std::fixed << std::setprecision( 11 ) << accumulative_time;
+                                  << std::fixed << std::setprecision( 14 ) << accumulative_time;
                         }
                     
                     std::cout << std::endl;
