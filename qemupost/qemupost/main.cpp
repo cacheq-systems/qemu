@@ -96,11 +96,12 @@ std::string
 dectohex( uint32_t value,
           uint32_t width )
     {
-    std::ostringstream ret;
-    
-    ret << std::hex << std::setfill( '0' ) << std::setw( width ) << std::uppercase << value;
-            
-    return ret.str();
+    //std::ostringstream ret;
+    //ret << std::hex << std::setfill( '0' ) << std::setw( width ) << std::uppercase << value;
+    //return ret.str();
+    static char buff[1024];
+    sprintf(buff, "%0*x", width, value);
+    return buff;
     }
 
 

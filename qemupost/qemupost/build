@@ -1,2 +1,2 @@
-c++ -std=c++11 -stdlib=libc++ -Wc++11-extensions -Wno-deprecated main.cpp itoa.c -o qemupost
+clang++ -O3 -std=c++11 -stdlib=libc++ -Wc++11-extensions -Wno-deprecated main.cpp itoa.c -o qemupost
 sudo cp qemupost /usr/local/bin
