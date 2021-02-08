@@ -743,62 +743,22 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
 }
 static void *log_pc(void *pArgs)
 {
-    static uint32_t lastPC = 0;
-    static uint32_t numInsns = 0;
-
-    //int zRet;
-
     TargetIsaData *pData;
-
-    //static uint64_t numWritten = 0;
-
-    //if (numWritten < 3000000) {
     for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-        if ((pData != NULL) && (_pPCLog != NULL)) {
-            if (lastPC == 0) {
-                // Begining...
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
-            else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
-                numInsns += pData->_insns_size;
-            }
-            else {
-                int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-                //if (zRet == Z_OK) {
-                    dumpValCompressed(__builtin_bswap32(relPC), 0);
-                    dumpValCompressed(__builtin_bswap32(numInsns), 0);
-                    //++numWritten;
-                //}
-                //else {
-                //    fwrite(&lastPC, 4, 1, _pPCLog);
-                //    fwrite(&numInsns, 4, 1, _pPCLog);
-                //    ++numWritten;
-                //}
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
+
+        // No longer using relative addresses...
+        if (pData != NULL) {
+            dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), 0);
+            dumpValCompressed(__builtin_bswap32(pData->_insns_size), 0);
         }
-        if ((pData == NULL) && (g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
+        if ((g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
             break;
         }
-        //else {
-        //    //sleep(1000);
-        //}
+        else {
+            sleep(0);
+        }
     }
-    //else {
-    //    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-    //    if ((pData != NULL) && (_pPCLog != NULL)) {
-    //        int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-    //        dumpValCompressed(relPC, 0);
-    //        dumpValCompressed(numInsns, 1);
-    //    }
-    //    if (_pPCLog != NULL) {
-    //        fclose(_pPCLog);
-    //        _pPCLog = NULL;
-    //    }
-    //}
     return NULL;
 }
 
