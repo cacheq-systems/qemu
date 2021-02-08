@@ -772,35 +772,17 @@ void openLogs(void)
 
 static void *log_pc(void *pArgs)
 {
-    static uint32_t lastPC = 0;
-    static uint32_t numInsns = 0;
-
     TargetIsaData *pData;
 
-    //static uint64_t numWritten = 0;
     if (_pPCLog == NULL) {
         openLogs();
     }
 
-    //if (numWritten < 3000000) {
     //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
         if ((pData != NULL) && (_pPCLog != NULL)) {
-            if (lastPC == 0) {
-                // Begining...
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
-            else if ((lastPC + (numInsns * 4) == pData->_pc_start_addr)) {
-                numInsns += pData->_insns_size;
-            }
-            else {
-                int32_t relPC = pData->_pc_start_addr - (lastPC + (numInsns * 4));
-                dumpValCompressed(__builtin_bswap32(relPC), 0);
-                dumpValCompressed(__builtin_bswap32(numInsns), 0);
-                lastPC = pData->_pc_start_addr;
-                numInsns = pData->_insns_size;
-            }
+            dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), 0);
+            dumpValCompressed(__builtin_bswap32(pData->_insns_size), 0);
         }
     //}
     return NULL;
