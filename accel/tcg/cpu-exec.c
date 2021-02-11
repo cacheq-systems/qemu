@@ -700,7 +700,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpValCompressed(uint32_t val, bool bForce);
 
 static GAsyncQueue *_pIsaQueue;
 extern FILE *_pPCLog;
@@ -714,7 +714,7 @@ typedef struct {
     uint32_t _nSize;
 } LogBuffer;
 
-void dumpValCompressed(uint32_t val, uint8_t bForce)
+void dumpValCompressed(uint32_t val, bool bForce)
 {
     static LogBuffer logBufPC = { {0}, 0 };
     if (_pPCLog != NULL) {
@@ -725,6 +725,14 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
         else {
             unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
             unsigned int compSize;
+            bool bOverflow = false;
+            if (!bForce && (logBufPC._nSize < TMP_BUF_SIZE)) {
+                logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+                ++logBufPC._nSize;
+            }
+            else {
+                bOverflow = true;
+            }
             // Compress the buffer...
             _pPCZStrm->avail_in = logBufPC._nSize * sizeof(uint32_t);
             _pPCZStrm->next_in = (Bytef *)logBufPC._tmpLogBuf;
@@ -738,27 +746,32 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
 
             // Reset the buffer
             logBufPC._nSize = 0;
+            if (!bForce && bOverflow) {
+                logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+                ++logBufPC._nSize;
+            }
         }
     }
 }
 static void *log_pc(void *pArgs)
 {
     TargetIsaData *pData;
-    for (;;) {
+    //for (;;) {
         pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
 
         // No longer using relative addresses...
         if (pData != NULL) {
-            dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), 0);
-            dumpValCompressed(__builtin_bswap32(pData->_insns_size), 0);
+            dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), false);
+            dumpValCompressed(__builtin_bswap32(pData->_insns_size), false);
         }
-        if ((g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
-            break;
-        }
-        else {
-            sleep(0);
-        }
-    }
+        //if ((g_async_queue_length(_pIsaQueue) == 0) && (_nThreadStop == 1)) {
+        //    printf("VIGGY: Stopping thread...\n");
+        //    break;
+        //}
+        //else {
+        //    sleep(0);
+        //}
+    //}
     return NULL;
 }
 
@@ -816,9 +829,10 @@ int cpu_exec(CPUState *cpu)
     // VIGGY:
     // Start the dumper thread.
     if (_pDumpThreadID == 0) {
+        _pDumpThreadID = 1;
         _nThreadStop = 0;
         _pIsaQueue = g_async_queue_new();
-        pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
+        //pthread_create(&_pDumpThreadID, NULL, log_pc, NULL);
     }
 
     /* if an exception is pending, we execute it here */
@@ -847,7 +861,7 @@ int cpu_exec(CPUState *cpu)
 
             // VIGGY: Log ISA here...
             g_async_queue_push(_pIsaQueue, tb->_p_isa_data);
-            //log_pc(NULL);
+            log_pc(NULL);
 
             /* Try to align the host and virtual clocks
                if the guest is in advance */

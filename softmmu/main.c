@@ -49,7 +49,7 @@ FILE *_pTBLog = NULL;
 FILE *_pPCLog = NULL;
 z_stream *_pPCZStrm = NULL;
 z_stream *_pTBZStrm = NULL;
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpValCompressed(uint32_t val, bool bForce);
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 pthread_t _pDumpThreadID = 0;
 uint8_t _nThreadStop = 0;
@@ -81,13 +81,12 @@ int main(int argc, char **argv, char **envp)
     qemu_main_loop();
 
     if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
+        dumpValCompressed(0, true);
 
         dumpTBData(NULL, 0);
 
         _nThreadStop = 1;
-        pthread_join(_pDumpThreadID, NULL);
+        //pthread_join(_pDumpThreadID, NULL);
 
         fclose(_pPCLog);
         fclose(_pTBLog);

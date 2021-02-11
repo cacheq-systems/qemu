@@ -31,7 +31,7 @@ extern FILE *_pTBLog;
 extern FILE *_pPCLog;
 extern z_stream *_pPCZStrm;
 extern z_stream *_pTBZStrm;
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpValCompressed(uint32_t val, bool bForce);
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 extern pthread_t _pDumpThreadID;
 extern uint8_t _nThreadStop;
@@ -51,11 +51,10 @@ void preexit_cleanup(CPUArchState *env, int code)
             free(_pTBZStrm);
         }
         if (_pPCLog != NULL) {
-            dumpValCompressed(0, 0);
-            dumpValCompressed(0, 1);
+            dumpValCompressed(0, true);
 
             _nThreadStop = 1;
-            pthread_join(_pDumpThreadID, NULL);
+            //pthread_join(_pDumpThreadID, NULL);
 
             fclose(_pPCLog);
         }
