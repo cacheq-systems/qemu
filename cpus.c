@@ -2025,7 +2025,7 @@ void cpu_stop_current(void)
 }
 
 // VIGGY:
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpValCompressed(uint32_t val, bool bForce);
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 
 extern FILE *_pPCLog;
@@ -2037,11 +2037,10 @@ extern uint8_t _nThreadStop;
 int vm_stop(RunState state)
 {
     if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
+        dumpValCompressed(0, true);
 
         _nThreadStop = 1;
-        pthread_join(_pDumpThreadID, NULL);
+        //pthread_join(_pDumpThreadID, NULL);
 
         fclose(_pPCLog);
         deflateEnd(_pPCZStrm);

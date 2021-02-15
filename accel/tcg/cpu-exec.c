@@ -668,7 +668,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 }
 
 // VIGGY:
-void dumpValCompressed(uint32_t val, uint8_t bForce);
+void dumpValCompressed(uint32_t val, bool bForce);
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize);
 void openLogs(void);
 void cleanUpLogs(void);
@@ -690,7 +690,7 @@ typedef struct {
     uint32_t _nSize;
 } LogBuffer;
 
-void dumpValCompressed(uint32_t val, uint8_t bForce)
+void dumpValCompressed(uint32_t val, bool bForce)
 {
     static LogBuffer logBufPC = { {0}, 0 };
     if (_pPCLog != NULL) {
@@ -701,6 +701,14 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
         else {
             unsigned char tmpBuf[TMP_BUF_SIZE * sizeof(uint32_t)];
             unsigned int compSize;
+            bool bOverflow = false;
+            if (!bForce && (logBufPC._nSize < TMP_BUF_SIZE)) {
+                logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+                ++logBufPC._nSize;
+            }
+            else {
+                bOverflow = true;
+            }
             // Compress the buffer...
             _pPCZStrm->avail_in = logBufPC._nSize * sizeof(uint32_t);
             _pPCZStrm->next_in = (Bytef *)logBufPC._tmpLogBuf;
@@ -714,6 +722,10 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
 
             // Reset the buffer
             logBufPC._nSize = 0;
+            if (!bForce && bOverflow) {
+                logBufPC._tmpLogBuf[logBufPC._nSize] = val;
+                ++logBufPC._nSize;
+            }
         }
     }
 }
@@ -721,8 +733,7 @@ void dumpValCompressed(uint32_t val, uint8_t bForce)
 void cleanUpLogs(void)
 {
     if (_pPCLog != NULL) {
-        dumpValCompressed(0, 0);
-        dumpValCompressed(0, 1);
+        dumpValCompressed(0, true);
 
         _nThreadStop = 1;
         //pthread_join(_pDumpThreadID, NULL);
@@ -778,13 +789,11 @@ static void *log_pc(void *pArgs)
         openLogs();
     }
 
-    //for (;;) {
-        pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
-        if ((pData != NULL) && (_pPCLog != NULL)) {
-            dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), 0);
-            dumpValCompressed(__builtin_bswap32(pData->_insns_size), 0);
-        }
-    //}
+    pData = (TargetIsaData*)g_async_queue_try_pop(_pIsaQueue);
+    if (pData != NULL) {
+        dumpValCompressed(__builtin_bswap32(pData->_pc_start_addr), false);
+        dumpValCompressed(__builtin_bswap32(pData->_insns_size), false);
+    }
     return NULL;
 }
 /* main execution loop */

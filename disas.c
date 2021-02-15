@@ -314,22 +314,23 @@ extern z_stream *_pTBZStrm;
 void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
 {
     static uint8_t compLogbuf[BUFFER_MAX];
-    static uint8_t tmpBuf[BUFFER_MAX];
-    static uint32_t logBufSize = 0;
+    //static uint8_t tmpBuf[BUFFER_MAX];
+    //static uint32_t logBufSize = 0;
 
-    if ((pBuffer != NULL) && ((logBufSize + bufSize) < BUFFER_MAX)) {
-        memcpy(&tmpBuf[logBufSize], pBuffer, bufSize);
-        logBufSize += bufSize;
-    }
-    else {
-        if (logBufSize == 0) {
-            memset(&tmpBuf, 0, sizeof(uint8_t) * BUFFER_MAX);
-            logBufSize = 64;
-        }
+    //if ((pBuffer != NULL) && ((logBufSize + bufSize) < BUFFER_MAX)) {
+    //    memcpy(&tmpBuf[logBufSize], pBuffer, bufSize);
+    //    logBufSize += bufSize;
+    //}
+    //else {
+        //if (logBufSize == 0) {
+        //    memset(&tmpBuf, 0, sizeof(uint8_t) * BUFFER_MAX);
+        //}
         unsigned int compSize;
         // Compress the buffer...
-        _pTBZStrm->avail_in = logBufSize;
-        _pTBZStrm->next_in = (Bytef *)tmpBuf;
+        //_pTBZStrm->avail_in = logBufSize;
+        //_pTBZStrm->next_in = (Bytef *)tmpBuf;
+        _pTBZStrm->avail_in = bufSize;
+        _pTBZStrm->next_in = (Bytef *)pBuffer;
         do {
             _pTBZStrm->avail_out = sizeof(compLogbuf);
             _pTBZStrm->next_out = compLogbuf;
@@ -338,12 +339,12 @@ void dumpTBData(uint8_t *pBuffer, uint32_t bufSize)
             fwrite(&compSize, 1, sizeof(compSize), _pTBLog);
             fwrite(&compLogbuf, 1, compSize, _pTBLog);
         } while (_pTBZStrm->avail_out == 0);
-        logBufSize = 0;
-        if (pBuffer != NULL) {
-            memcpy(&tmpBuf, pBuffer, bufSize);
-            logBufSize += bufSize;
-        }
-    }
+        //logBufSize = 0;
+        //if (pBuffer != NULL) {
+        //    memcpy(&tmpBuf, pBuffer, bufSize);
+        //    logBufSize += bufSize;
+        //}
+    //}
 }
 
 void openLogs(void);
